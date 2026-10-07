@@ -633,7 +633,7 @@ for col, (label, value, delta_color) in zip(cols, kpis):
 
 **If this table is empty:** N/A — see rows above.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **NYSE holiday calendar source for the DATA-03 gap check**
    - What we know: `pd.bdate_range` alone will false-positive on every US market holiday;
@@ -644,6 +644,7 @@ for col, (label, value, delta_color) in zip(cols, kpis):
    - Recommendation: Hand-vendor a static list for 1993–2030 (a few hundred known dates, cheap to
      generate once from any authoritative NYSE holiday source) unless the planner decides the
      dependency is worth it — flag for the planner to decide explicitly, not left implicit.
+   - RESOLVED: 01-02-PLAN.md Task 1 builds core/market_calendar.py (nyse_sessions from pandas holiday rules plus a vendored NYSE_SPECIAL_CLOSURES list); no pandas_market_calendars dependency.
 
 2. **Streamlit Community Cloud's exact dependency-file detection (`pyproject.toml` vs `requirements.txt`)**
    - What we know: Community Cloud's docs describe installing from a repo's dependency files but
@@ -653,6 +654,7 @@ for col, (label, value, delta_color) in zip(cols, kpis):
    - Recommendation: Treat `pyproject.toml`-only as the default; capture the "Manage app →
      Dependencies" log on the very first real deploy as the actual confirmation, and prepare (but
      don't pre-emptively commit) a `requirements.txt` fallback.
+   - RESOLVED: 01-01-PLAN.md Task 2 commits a one-line requirements.txt (".") that installs from pyproject.toml; 01-06-PLAN.md Task 2 deploy checkpoint confirms the Dependencies log, and Task 3 switches to an explicit list only if install fails.
 
 3. **`st.form`/"Update grid" debounce fallback (D-09)**
    - What we know: ~192 heatmap backtests + 24 headline/scatter backtests per sidebar change,
@@ -664,6 +666,7 @@ for col, (label, value, delta_color) in zip(cols, kpis):
    - Recommendation: Implement without the `st.form` fallback first (per D-09's explicit
      instruction), but have the plan include a quick manual timing check during implementation
      before declaring LAB-05 done — add the fallback only if that check shows it's needed.
+   - RESOLVED: 01-05-PLAN.md Task 2 adds scripts/profile_lab_grid.py, times the grid against SETTINGS.grid_debounce_threshold_s, and adds the st.form debounce only if the measurement exceeds it.
 
 ## Environment Availability
 
