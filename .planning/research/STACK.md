@@ -8,6 +8,11 @@ This research covers the **app, event-detection, news-enrichment and automation 
 
 ## Recommended Stack
 
+> **Orchestrator corrections (2026-10-07), these override the text below:**
+> - **Model IDs and prices below are UNVERIFIED.** `claude-haiku-5-5` and `claude-sonnet-5-5` (and their per-MTok prices) do not match the known current model list (`claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5`, `claude-haiku-4-5-20251001`). Before Phase 3, verify model IDs, token prices and web-search pricing against the official Claude docs, set the model ID in `core/config.py`, and redo the budget estimate (NEWS-07).
+> - **No TTL on `st.cache_data`.** Each nightly data commit redeploys the app, which clears the cache; a TTL would only hide a failed redeploy (see ARCHITECTURE.md).
+> - **Stooq fallback dropped** (user decision): yfinance with retries; on failure the job fails loudly and the last committed snapshot stays.
+
 ### Core Technologies
 
 | Technology | Version | Purpose | Why Recommended |
