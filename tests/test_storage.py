@@ -4,9 +4,9 @@ from datetime import UTC, datetime
 
 import pandas as pd
 import pytest
-from core.storage import BASES, build_meta, load_meta, price_basis, write_meta
 
 from core.data import to_total_return
+from core.storage import BASES, build_meta, load_meta, price_basis, write_meta
 
 
 def test_price_basis_total_return(tiny_prices):
