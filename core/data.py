@@ -1,15 +1,17 @@
 """Price loading and storage.
 
-Network calls live here and are only used by jobs/scripts, never by the Streamlit app.
-The app reads the committed parquet snapshot through `read_prices`.
+yfinance is the only price source (the Stooq fallback was removed: pandas-datareader
+dropped its Stooq reader, and Stooq's own endpoint now requires a CAPTCHA-gated API key,
+per D-17). Network calls live here and are only used by jobs/scripts, never by the
+Streamlit app. A failed refresh keeps the last committed snapshot — see
+jobs/refresh_prices.py. The app reads the committed parquet snapshot through
+`core.storage` (which wraps `read_prices` below).
 """
 from __future__ import annotations
 
-import io
 from pathlib import Path
 
 import pandas as pd
-import requests
 
 COLUMNS = ["open", "high", "low", "close", "adj_close", "volume"]
 
@@ -42,36 +44,6 @@ def fetch_yfinance(ticker: str, start: str, end: str | None = None) -> pd.DataFr
         }
     )
     return _finalise(raw, "yfinance")
-
-
-def fetch_stooq(ticker: str, start: str, end: str | None = None) -> pd.DataFrame:
-    """Fallback source. Stooq's series is treated as already adjusted (adj_close = close).
-
-    Verify this assumption against yfinance before relying on Stooq for total-return work.
-    """
-    url = f"https://stooq.com/q/d/l/?s={ticker.lower()}.us&i=d"
-    resp = requests.get(url, timeout=30)
-    resp.raise_for_status()
-    raw = pd.read_csv(io.StringIO(resp.text), parse_dates=["Date"], index_col="Date")
-    if raw.empty or "Close" not in raw.columns:
-        raise ValueError(f"Stooq returned no usable rows for {ticker}")
-    raw = raw.rename(columns=str.lower)
-    raw["adj_close"] = raw["close"]
-    raw = raw.loc[start:end] if end else raw.loc[start:]
-    return _finalise(raw, "stooq")
-
-
-def load_prices(ticker: str, start: str, end: str | None = None,
-                sources: tuple[str, ...] = ("yfinance", "stooq")) -> pd.DataFrame:
-    """Try each source in order and return the first that works."""
-    fetchers = {"yfinance": fetch_yfinance, "stooq": fetch_stooq}
-    errors = []
-    for name in sources:
-        try:
-            return fetchers[name](ticker, start, end)
-        except Exception as exc:  # noqa: BLE001 - try the next source
-            errors.append(f"{name}: {exc}")
-    raise RuntimeError("All price sources failed: " + "; ".join(errors))
 
 
 def to_total_return(df: pd.DataFrame) -> pd.DataFrame:

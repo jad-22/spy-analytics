@@ -14,7 +14,7 @@ import argparse
 import pandas as pd
 
 from core.config import SETTINGS
-from core.data import load_prices, to_total_return, write_prices
+from core.data import fetch_yfinance, to_total_return, write_prices
 from core.grid import default_pairs, rolling_start, run_ma_grid
 from core.indicators import MASpec
 
@@ -29,7 +29,7 @@ def main() -> None:
     p.add_argument("--save", action="store_true", help="also write data/prices.parquet")
     args = p.parse_args()
 
-    raw = load_prices(SETTINGS.ticker, start=SETTINGS.start)
+    raw = fetch_yfinance(SETTINGS.ticker, start=SETTINGS.start)
     print(f"Loaded {len(raw)} rows from {raw.attrs['source']} "
           f"({raw.index[0].date()} to {raw.index[-1].date()})")
     if args.save:

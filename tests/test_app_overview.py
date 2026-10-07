@@ -31,11 +31,28 @@ def test_overview_renders_from_committed_data():
 
 
 def test_overview_makes_no_network_calls(monkeypatch):
-    def _blocked(*args, **kwargs):
-        raise RuntimeError("network call attempted")
+    # Loopback only: Windows' asyncio event loop creates a self-pipe via a loopback
+    # socketpair() fallback, which calls socket.connect() internally on every AppTest
+    # run — unrelated to app behavior. Block everything except 127.0.0.1/::1/localhost
+    # so a real external call (e.g. to Yahoo Finance) still fails this test.
+    allowed_hosts = {"127.0.0.1", "::1", "localhost"}
+    original_connect = socket.socket.connect
+    original_create_connection = socket.create_connection
 
-    monkeypatch.setattr(socket.socket, "connect", _blocked)
-    monkeypatch.setattr(socket, "create_connection", _blocked)
+    def _guarded_connect(self, address, *args, **kwargs):
+        host = address[0] if isinstance(address, tuple) else address
+        if host not in allowed_hosts:
+            raise RuntimeError(f"network call attempted to {host!r}")
+        return original_connect(self, address, *args, **kwargs)
+
+    def _guarded_create_connection(address, *args, **kwargs):
+        host = address[0] if isinstance(address, tuple) else address
+        if host not in allowed_hosts:
+            raise RuntimeError(f"network call attempted to {host!r}")
+        return original_create_connection(address, *args, **kwargs)
+
+    monkeypatch.setattr(socket.socket, "connect", _guarded_connect)
+    monkeypatch.setattr(socket, "create_connection", _guarded_create_connection)
 
     at = AppTest.from_file(OVERVIEW_PATH, default_timeout=60).run()
     assert not at.exception
