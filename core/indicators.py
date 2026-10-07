@@ -28,6 +28,14 @@ class MASpec:
     def label(self) -> str:
         return f"{self.kind}{self.period}"
 
+    @classmethod
+    def from_label(cls, label: str) -> MASpec:
+        """Parse a label like 'sma50' or 'ema200' back into a MASpec. Raises ValueError otherwise."""
+        for kind in ("sma", "ema"):
+            if label.startswith(kind) and label[len(kind) :].isdigit():
+                return cls(kind, int(label[len(kind) :]))
+        raise ValueError(f"Invalid MA label: {label!r}. Expected e.g. 'sma50' or 'ema200'.")
+
     def compute(self, series: pd.Series) -> pd.Series:
         fn = sma if self.kind == "sma" else ema
         return fn(series, self.period).rename(self.label)
