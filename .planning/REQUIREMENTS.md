@@ -7,20 +7,20 @@
 
 ### Data & Storage
 
-- [ ] **DATA-01**: The price job writes SPY daily OHLCV and adjusted close from 1993-01-29 to the latest trading day to `data/prices.parquet`
-- [ ] **DATA-02**: The price job pins yfinance `auto_adjust=False` and flat columns, retries on failure, and on final failure exits non-zero, leaving the last good snapshot untouched
+- [x] **DATA-01**: The price job writes SPY daily OHLCV and adjusted close from 1993-01-29 to the latest trading day to `data/prices.parquet`
+- [x] **DATA-02**: The price job pins yfinance `auto_adjust=False` and flat columns, retries on failure, and on final failure exits non-zero, leaving the last good snapshot untouched
 - [ ] **DATA-03**: The price job validates the snapshot before writing (no non-holiday gaps, no history rewritten beyond tolerance, row count never shrinks)
-- [ ] **DATA-04**: `data/meta.json` records last refresh time, last trading day, row counts and detector version
-- [ ] **DATA-05**: The app reads every `data/` file through one cached storage module, and no page makes a network call
+- [x] **DATA-04**: `data/meta.json` records last refresh time, last trading day, row counts and detector version
+- [x] **DATA-05**: The app reads every `data/` file through one cached storage module, and no page makes a network call
 
 ### Overview
 
-- [ ] **OVER-01**: Visitor can view SPY price as a line or candlestick chart over a chosen date range (sidebar)
+- [x] **OVER-01**: Visitor can view SPY price as a line or candlestick chart over a chosen date range (sidebar)
 - [ ] **OVER-02**: Visitor can toggle SMA/EMA overlays on the price chart
 - [ ] **OVER-03**: Visitor can toggle shaded drawdown regimes (−5%, −10%, −20%)
 - [ ] **OVER-04**: Visitor sees a KPI strip: YTD return, distance from all-time high, current drawdown, 20-day realised volatility
 - [ ] **OVER-05**: Visitor sees a table of the largest drawdowns (peak, trough, recovery date, depth, days underwater)
-- [ ] **OVER-06**: Visitor can switch between total-return and price-only series (sidebar)
+- [x] **OVER-06**: Visitor can switch between total-return and price-only series (sidebar)
 
 ### Strategy Lab
 
@@ -123,17 +123,17 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
+| DATA-02 | Phase 1 | Complete |
 | DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
-| DATA-05 | Phase 1 | Pending |
-| OVER-01 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Complete |
+| DATA-05 | Phase 1 | Complete |
+| OVER-01 | Phase 1 | Complete |
 | OVER-02 | Phase 1 | Pending |
 | OVER-03 | Phase 1 | Pending |
 | OVER-04 | Phase 1 | Pending |
 | OVER-05 | Phase 1 | Pending |
-| OVER-06 | Phase 1 | Pending |
+| OVER-06 | Phase 1 | Complete |
 | LAB-01 | Phase 1 | Pending |
 | LAB-02 | Phase 1 | Pending |
 | LAB-03 | Phase 1 | Pending |

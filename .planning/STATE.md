@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-10-07T23:28:16.905Z"
-last_activity: 2026-10-07 -- Phase 01 execution started
+last_updated: "2026-10-07T23:54:30.137Z"
+last_activity: 2026-10-07
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -27,11 +27,11 @@ look-ahead, total-return prices and costs, event explanations cite in-window sou
 ## Current Position
 
 Phase: 01 (foundation-overview-strategy-lab) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 01
-Last activity: 2026-10-07 -- Phase 01 execution started
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-10-07
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01 P01 | 14min | 4 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Recent decisions affecting current work:
 
 - Phase 0: Corrected engine confirms 0/24 MA rules beat buy-and-hold (2010-2022, any basis/cost) — Strategy Lab must lead with this finding, not bury it.
 - Roadmap: Phases 1 and 2 have no dependency and may be planned/executed in parallel; Phase 3 (LLM backfill, irreversible spend) is gated on Phase 2's episode-ID-stability replay test; Phase 4 needs real enriched data from Phase 3 before Event Explorer/Study are demo-worthy.
+- [Phase 01]: Phase 1 Plan 01: tenacity.Retrying used as a callable (not @retry decorator) so fetch_with_retry calls the bare module-level fetch_yfinance name, letting tests monkeypatch it directly
+- [Phase 01]: Phase 1 Plan 01: app/components/store.py functions read SETTINGS as a module-level global at call time (not a bound default), so tests can monkeypatch store.SETTINGS to point at a missing snapshot for the empty-state test
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-07T22:23:30.264Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-foundation-overview-strategy-lab/01-CONTEXT.md
+Last session: 2026-10-07T23:54:30.125Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
