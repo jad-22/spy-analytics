@@ -31,6 +31,15 @@ system `python` is Anaconda 3.9 and too old.
 - `notebooks/` is historical and excluded from ruff; don't modify it.
 - Before Phase 3, check current Claude model IDs and web-search pricing; the model ID goes in config.
 
+## Corrections to the generated Technology Stack section below
+
+These override the auto-generated stack text (sourced from `.planning/research/STACK.md`):
+- The model IDs `claude-haiku-5-5` / `claude-sonnet-5-5` and their prices are **unverified** and
+  don't match the known current models (`claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5`,
+  `claude-haiku-4-5-20251001`). Verify against official docs before any API spend.
+- No `ttl` on `st.cache_data`: each nightly data commit redeploys the app and clears the cache.
+- No Stooq fallback: yfinance with retries; on failure the last committed snapshot stays.
+
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
