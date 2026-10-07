@@ -31,3 +31,8 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 100
 extend-exclude = ["notebooks"]  # original 2022 EDA, kept unmodified for history
+
+[tool.ruff.lint.per-file-ignores]
+# Streamlit's own convention: the entrypoint is capitalized so it sorts first and reads
+# as the app's "Home" page in the sidebar nav; not a PEP 8 module-name violation to fix.
+"app/Home.py" = ["N999"]

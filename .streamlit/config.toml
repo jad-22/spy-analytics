@@ -1,0 +1,10 @@
+[theme]
+base = "light"
+primaryColor = "#1A5FB4"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"
+baseFontSize = 16
+chartCategoricalColors = ["#1A5FB4", "#6B7280", "#1A7F37", "#C0152F"]
+chartDivergingColors = ["#C0152F", "#FFFFFF", "#1A7F37"]
