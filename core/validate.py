@@ -11,7 +11,9 @@ import pandas as pd
 from core.config import Settings
 from core.market_calendar import nyse_sessions
 
-_REWRITE_COLUMNS = ("open", "high", "low", "close", "volume")
+# Volume is excluded: Yahoo revises the latest session's consolidated volume after
+# the close, and no backtest or metric reads it.
+_REWRITE_COLUMNS = ("open", "high", "low", "close")
 
 
 def validate_snapshot(new: pd.DataFrame, old: pd.DataFrame | None, cfg: Settings) -> None:
@@ -24,13 +26,7 @@ def validate_snapshot(new: pd.DataFrame, old: pd.DataFrame | None, cfg: Settings
 
         overlap = old.index.intersection(new.index)
         for col in _REWRITE_COLUMNS:
-            if col == "volume":
-                rows = overlap[old.loc[overlap, "volume"] > 0]
-            else:
-                rows = overlap
-            if len(rows) == 0:
-                continue
-            ratio = (new.loc[rows, col] / old.loc[rows, col] - 1).abs()
+            ratio = (new.loc[overlap, col] / old.loc[overlap, col] - 1).abs()
             bad = ratio[ratio > cfg.rewrite_tolerance_pct]
             if len(bad):
                 raise ValueError(

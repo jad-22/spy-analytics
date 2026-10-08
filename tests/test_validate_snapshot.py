@@ -60,12 +60,14 @@ def test_close_rewrite_beyond_tolerance_raises(nyse_frame):
         validate_snapshot(new, old, SETTINGS)
 
 
-def test_volume_rewrite_beyond_tolerance_raises(nyse_frame):
+def test_volume_revision_passes(nyse_frame):
+    # Yahoo revises the latest session's consolidated volume after the close
+    # (seen live: 2026-10-07, ~0.69%). Volume feeds no metric, so it is exempt.
     old = nyse_frame.iloc[:-1]
     new = nyse_frame.copy()
-    new.loc[new.index[50], "volume"] *= 1.01  # 1% > 0.01% tolerance
-    with pytest.raises(ValueError, match="volume"):
-        validate_snapshot(new, old, SETTINGS)
+    new.loc[new.index[-2], "volume"] *= 1.0069
+    new.loc[new.index[50], "volume"] *= 1.5
+    validate_snapshot(new, old, SETTINGS)  # no raise
 
 
 def test_adj_close_common_factor_passes(nyse_frame):
