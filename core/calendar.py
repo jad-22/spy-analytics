@@ -189,6 +189,24 @@ def parse_fred_release_dates(
     return _frame(rows)
 
 
+def first_release_per_month(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Keep each release's earliest date per calendar month; return (kept, dropped).
+
+    FRED's release/dates lists every day new data was published for a release,
+    including off-cycle revisions (e.g. CPI 2000-02-29 and 2000-09-28, payrolls
+    2024-01-10 and the 2024-08-21 preliminary benchmark revision -- confirmed against
+    the live API in 02-04). CPI and payrolls each have one scheduled print per month,
+    and the scheduled print always comes first, so later same-month dates are
+    revisions, not scheduled catalysts.
+    """
+    month = df["date"].dt.to_period("M")
+    first = df.groupby([df["release"], month])["date"].transform("min")
+    is_first = df["date"] == first
+    kept = df[is_first].reset_index(drop=True)
+    dropped = df[~is_first].reset_index(drop=True)
+    return kept, dropped
+
+
 def merge_calendar(existing: pd.DataFrame | None, fresh: pd.DataFrame, today) -> pd.DataFrame:
     """Combine a freshly rebuilt calendar with the previously committed one (D-03).
 

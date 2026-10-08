@@ -11,6 +11,7 @@ import pytest
 import requests
 
 from core.calendar import (
+    first_release_per_month,
     merge_calendar,
     parse_fomc_calendars,
     parse_fomc_historical,
@@ -135,6 +136,53 @@ def test_parse_fred_release_dates_raises_on_zero_rows():
     payload = {"count": 0, "release_dates": []}
     with pytest.raises(ValueError):
         parse_fred_release_dates(payload, "CPI", 10, SETTINGS.fred_source_url_template)
+
+
+# --- first_release_per_month (02-04 live-run fix) ----------------------------------------
+
+# Exact live FRED release/dates output for the two years that failed the 10-13/year
+# check in the first real 02-04 run.
+LIVE_CPI_2000 = [
+    "2000-01-14", "2000-02-18", "2000-02-29", "2000-03-17", "2000-04-14", "2000-05-16",
+    "2000-06-14", "2000-07-18", "2000-08-16", "2000-09-15", "2000-09-28", "2000-10-18",
+    "2000-11-16", "2000-12-15",
+]
+LIVE_PAYROLLS_2024 = [
+    "2024-01-05", "2024-01-10", "2024-02-02", "2024-03-08", "2024-04-05", "2024-05-03",
+    "2024-06-07", "2024-07-05", "2024-08-02", "2024-08-21", "2024-09-06", "2024-10-04",
+    "2024-11-01", "2024-12-06",
+]
+
+
+def _fred_frame(dates: list[str], label: str, rid: int) -> pd.DataFrame:
+    payload = {"count": len(dates), "release_dates": [{"release_id": rid, "date": d} for d in dates]}
+    return parse_fred_release_dates(payload, label, rid, SETTINGS.fred_source_url_template)
+
+
+@pytest.mark.parametrize(
+    ("dates", "label", "rid", "revisions"),
+    [
+        (LIVE_CPI_2000, "CPI", 10, ["2000-02-29", "2000-09-28"]),
+        (LIVE_PAYROLLS_2024, "payrolls", 50, ["2024-01-10", "2024-08-21"]),
+    ],
+)
+def test_first_release_per_month_drops_live_off_cycle_revisions(dates, label, rid, revisions):
+    kept, dropped = first_release_per_month(_fred_frame(dates, label, rid))
+    assert dropped["date"].dt.strftime("%Y-%m-%d").tolist() == revisions
+    assert len(kept) == 12
+    assert kept["date"].dt.month.tolist() == list(range(1, 13))
+    assert list(kept.columns) == list(dropped.columns)
+
+
+def test_first_release_per_month_is_per_release():
+    """CPI and payrolls in the same month are different releases; both survive."""
+    df = pd.concat(
+        [_fred_frame(["2000-01-07"], "payrolls", 50), _fred_frame(["2000-01-14"], "CPI", 10)],
+        ignore_index=True,
+    )
+    kept, dropped = first_release_per_month(df)
+    assert len(kept) == 2
+    assert dropped.empty
 
 
 # --- merge_calendar (D-03 idempotency) -------------------------------------------------
