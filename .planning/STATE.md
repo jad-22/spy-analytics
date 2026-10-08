@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-10-08T20:03:09.868Z"
+last_updated: "2026-10-08T20:18:17.007Z"
 last_activity: 2026-10-08
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
   percent: 25
 ---
 
@@ -27,11 +27,11 @@ look-ahead, total-return prices and costs, event explanations cite in-window sou
 ## Current Position
 
 Phase: 02 (event-detection-macro-calendar) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-10-08
 
-Progress: [██████░░░░] 64%
+Progress: [███████░░░] 73%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [██████░░░░] 64%
 | Phase 01 P05 | 17m | 2 tasks | 9 files |
 | Phase 01 P06 | 20min | 3 tasks | 3 files |
 | Phase 02 P01 | 15min | 3 tasks | 8 files |
+| Phase 02 P02 | 12min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Phase 1 (01-06): left core/config.py rewrite_tolerance_pct and core/validate.py unchanged after the live GitHub Actions nightly run reproduced the same D-13 volume-only rejection seen in 01-02's local repro (Yahoo revises most-recent-day volume post-close) -- tolerance change is a user decision, not an auto-fix
 - [Phase 01]: D-13 gate exempts volume from the rewrite tolerance (user decision 2026-10-08): Yahoo revises latest-session volume post-close; OHLC + adj_close still guarded
 - [Phase 02]: D-01 steepest-leg clustering confirmed empirically: 142 episodes on real 1993+ data, all seven DET-07 known episodes map to exactly one episode each, Feb 2018 and Q4 2018 on separate episode_ids
+- [Phase 02]: closure_frontier combines three independent lower bounds (future shock/gap day, future rally lookback, live running-peak position) with a plain min(), not a settings-driven weighting
+- [Phase 02]: closure_frontier's running-peak frontier candidate fires at any depth below peak, not only once a dip reaches drawdown_threshold, since a shallow dip could still deepen into a qualifying leg on the next appended row
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-08T20:03:09.858Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-10-08T20:18:16.995Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

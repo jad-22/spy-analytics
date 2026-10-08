@@ -79,7 +79,7 @@ Plans:
   4. All detection thresholds live in config (not hard-coded), and the 1993+ backfill produces an episode count in the low hundreds.
   5. `data/macro_calendar.parquet` lists FOMC decision, CPI and payrolls release dates from 1993 with a source URL each, and every detected episode is tagged with any such release inside its window (scheduled vs surprise).
 
-**Plans:** 1/5 plans executed
+**Plans:** 2/5 plans executed
 Plans:
 **Wave 1**
 
@@ -87,7 +87,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — Replay stability: closed/open status via closure frontier, real-data replay test at six cutoffs, no-literal/purity guards (wave 2)
+- [x] 02-02-PLAN.md — Replay stability: closed/open status via closure frontier, real-data replay test at six cutoffs, no-literal/purity guards (wave 2)
 - [ ] 02-03-PLAN.md — Macro calendar builder offline: Fed/FRED fetchers in core/data.py, pure parsers in core/calendar.py, idempotent job (D-03), key hygiene (D-02), real-page fixtures (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -140,6 +140,6 @@ Phase 2 complete. Phase 4 requires Phases 1, 2 and 3 complete.
 |-------|----------------|--------|-----------|
 | 0. Core engine rebuild | - | Complete | 2026-10-07 |
 | 1. Foundation, Overview & Strategy Lab | 6/6 | Complete   | 2026-10-08 |
-| 2. Event Detection & Macro Calendar | 1/5 | In Progress|  |
+| 2. Event Detection & Macro Calendar | 2/5 | In Progress|  |
 | 3. News Enrichment, Backfill & Review | 0/TBD | Not started | - |
 | 4. Event Explorer, Event Study, Methodology & Nightly Automation | 0/TBD | Not started | - |

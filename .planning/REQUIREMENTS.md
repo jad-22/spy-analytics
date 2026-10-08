@@ -41,7 +41,7 @@
 - [x] **DET-02**: The detector flags gap opens (|open / previous close − 1| > 1.5%)
 - [x] **DET-03**: The detector finds drawdown episodes (peak-to-trough ≥ 5% on closes, ending at a new high) and rally episodes (trough-to-peak ≥ 8% within 30 trading days)
 - [x] **DET-04**: Flagged days within 3 trading days merge into one episode with an `anchor_date`, a severity score and a search window
-- [ ] **DET-05**: Episode IDs are deterministic and stable across nightly re-runs (a replay test proves that appending data never changes a closed episode)
+- [x] **DET-05**: Episode IDs are deterministic and stable across nightly re-runs (a replay test proves that appending data never changes a closed episode)
 - [x] **DET-06**: All thresholds live in config, and calibration keeps the 1993+ backfill in the low hundreds of episodes
 - [x] **DET-07**: Known episodes (2000–02, 2008, Aug 2015, Feb 2018, Q4 2018, Mar 2020, 2022) are detected, and a test asserts it
 
@@ -150,7 +150,7 @@
 | DET-02 | Phase 2 | Complete |
 | DET-03 | Phase 2 | Complete |
 | DET-04 | Phase 2 | Complete |
-| DET-05 | Phase 2 | Pending |
+| DET-05 | Phase 2 | Complete |
 | DET-06 | Phase 2 | Complete |
 | DET-07 | Phase 2 | Complete |
 | CAL-01 | Phase 2 | Pending |
