@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-10-08T20:18:17.007Z"
+last_updated: "2026-10-08T20:43:28.888Z"
 last_activity: 2026-10-08
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 11
-  completed_plans: 8
+  completed_plans: 9
   percent: 25
 ---
 
@@ -27,11 +27,11 @@ look-ahead, total-return prices and costs, event explanations cite in-window sou
 ## Current Position
 
 Phase: 02 (event-detection-macro-calendar) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-10-08
 
-Progress: [███████░░░] 73%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [███████░░░] 73%
 | Phase 01 P06 | 20min | 3 tasks | 3 files |
 | Phase 02 P01 | 15min | 3 tasks | 8 files |
 | Phase 02 P02 | 12min | 2 tasks | 4 files |
+| Phase 02 P03 | 25min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - [Phase 02]: D-01 steepest-leg clustering confirmed empirically: 142 episodes on real 1993+ data, all seven DET-07 known episodes map to exactly one episode each, Feb 2018 and Q4 2018 on separate episode_ids
 - [Phase 02]: closure_frontier combines three independent lower bounds (future shock/gap day, future rally lookback, live running-peak position) with a plain min(), not a settings-driven weighting
 - [Phase 02]: closure_frontier's running-peak frontier candidate fires at any depth below peak, not only once a dip reaches drawdown_threshold, since a shallow dip could still deepen into a qualifying leg on the next appended row
+- [Phase 02]: "(notation vote)" entries on the current fomccalendars.htm page are excluded entirely from parse_fomc_calendars (not a rate-decision meeting) -- keeps FOMC per-year counts within the (7,8) bound
+- [Phase 02]: merge_calendar relies on the job always re-fetching the full calendar_start..horizon window each run, so fresh always wins; existing only gates the D-03 missing-past-row check
+- [Phase 02]: A "(cancelled)" FOMC meeting (2020 March 17-18) produces no row at all, distinct from "(unscheduled)" emergency meetings which are stored as real scheduled=False decisions
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-08T20:18:16.995Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-10-08T20:43:28.876Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None

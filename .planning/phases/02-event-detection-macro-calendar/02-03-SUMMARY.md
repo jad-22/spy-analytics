@@ -194,3 +194,10 @@ printed, or stored by this execution -- Jason runs the live job himself with his
 ---
 *Phase: 02-event-detection-macro-calendar*
 *Completed: 2026-10-08*
+
+## Self-Check: PASSED
+
+All claimed files verified present on disk (core/calendar.py, jobs/build_macro_calendar.py,
+tests/test_calendar.py, tests/test_build_macro_calendar.py, and all 7
+tests/fixtures/macro/* files). All claimed commit hashes (8e8bb6a, afa9b87, 3f8bc8a)
+verified present in `git log --oneline --all`.

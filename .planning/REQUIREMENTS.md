@@ -47,7 +47,7 @@
 
 ### Macro Calendar
 
-- [ ] **CAL-01**: `data/macro_calendar.parquet` lists FOMC decision, CPI and payrolls release dates from 1993, each with a source URL
+- [x] **CAL-01**: `data/macro_calendar.parquet` lists FOMC decision, CPI and payrolls release dates from 1993, each with a source URL
 - [ ] **CAL-02**: Each episode is tagged with any scheduled releases inside its window (scheduled vs surprise)
 
 ### News Enrichment
@@ -153,7 +153,7 @@
 | DET-05 | Phase 2 | Complete |
 | DET-06 | Phase 2 | Complete |
 | DET-07 | Phase 2 | Complete |
-| CAL-01 | Phase 2 | Pending |
+| CAL-01 | Phase 2 | Complete |
 | CAL-02 | Phase 2 | Pending |
 | NEWS-01 | Phase 3 | Pending |
 | NEWS-02 | Phase 3 | Pending |
