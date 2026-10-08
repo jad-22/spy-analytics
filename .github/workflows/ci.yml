@@ -2,6 +2,7 @@ name: ci
 
 on:
   push:
+    paths-ignore: ["data/**"]
   pull_request:
 
 jobs:

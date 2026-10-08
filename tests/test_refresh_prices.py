@@ -4,8 +4,22 @@ import pandas as pd
 
 from core.config import SETTINGS
 from core.data import COLUMNS, write_prices
+from core.market_calendar import nyse_sessions
 from core.storage import load_meta
 from jobs import refresh_prices
+
+
+def _gapless_frame():
+    """A real-NYSE-session gapless frame, so the D-13 gap check never rejects it."""
+    idx = nyse_sessions("2024-01-02", "2024-01-10")
+    opens = [100.0, 110.0, 99.0, 99.0, 120.0, 132.0, 140.0]
+    return pd.DataFrame(
+        {
+            "open": opens, "high": opens, "low": opens, "close": opens,
+            "adj_close": opens, "volume": 1,
+        },
+        index=idx,
+    )
 
 
 def test_fetch_yfinance_pins_auto_adjust_and_flat_columns(monkeypatch):
@@ -73,11 +87,12 @@ def test_main_exits_1_and_leaves_snapshot_on_final_failure(tmp_path, tiny_prices
     assert meta_path.read_bytes() == before_meta
 
 
-def test_main_success_writes_prices_and_meta(tmp_path, tiny_prices, monkeypatch):
-    tiny_prices.attrs["source"] = "yfinance"
+def test_main_success_writes_prices_and_meta(tmp_path, monkeypatch):
+    gapless = _gapless_frame()
+    gapless.attrs["source"] = "yfinance"
 
     def fake_fetch(ticker, start, end=None):
-        return tiny_prices
+        return gapless
 
     monkeypatch.setattr(refresh_prices, "fetch_yfinance", fake_fetch)
 
@@ -94,18 +109,19 @@ def test_main_success_writes_prices_and_meta(tmp_path, tiny_prices, monkeypatch)
 
     assert exit_code == 0
     meta = load_meta(meta_path)
-    assert meta["row_counts"] == {"prices": 6}
+    assert meta["row_counts"] == {"prices": 7}
     assert meta["detector_version"] == SETTINGS.detector_version
-    assert meta["last_trading_day"] == "2024-01-08"
+    assert meta["last_trading_day"] == "2024-01-10"
 
 
-def test_main_requests_history_start(tmp_path, tiny_prices, monkeypatch):
-    tiny_prices.attrs["source"] = "yfinance"
+def test_main_requests_history_start(tmp_path, monkeypatch):
+    gapless = _gapless_frame()
+    gapless.attrs["source"] = "yfinance"
     recorded = {}
 
     def fake_fetch(ticker, start, end=None):
         recorded["start"] = start
-        return tiny_prices
+        return gapless
 
     monkeypatch.setattr(refresh_prices, "fetch_yfinance", fake_fetch)
 
@@ -120,3 +136,92 @@ def test_main_requests_history_start(tmp_path, tiny_prices, monkeypatch):
     )
 
     assert recorded["start"] == SETTINGS.history_start
+
+
+def test_main_exits_1_on_validation_failure_and_keeps_files(tmp_path, monkeypatch):
+    gapless = _gapless_frame()
+    gapless.attrs["source"] = "yfinance"
+
+    prices_path = tmp_path / "prices.parquet"
+    meta_path = tmp_path / "meta.json"
+    write_prices(gapless, prices_path)
+    meta_path.write_text('{"existing": true}')
+
+    before_prices = prices_path.read_bytes()
+    before_meta = meta_path.read_bytes()
+
+    bad = gapless.copy()
+    bad.loc[bad.index[0], "close"] *= 1.01  # 1% historical rewrite, beyond tolerance
+
+    def fake_fetch(ticker, start, end=None):
+        return bad
+
+    monkeypatch.setattr(refresh_prices, "fetch_yfinance", fake_fetch)
+
+    exit_code = refresh_prices.main(
+        [
+            "--prices-path", str(prices_path),
+            "--meta-path", str(meta_path),
+            "--retry-wait-max", "0",
+        ]
+    )
+
+    assert exit_code == 1
+    assert prices_path.read_bytes() == before_prices
+    assert meta_path.read_bytes() == before_meta
+
+
+def test_main_exits_1_when_fetched_history_shrinks(tmp_path, monkeypatch):
+    gapless = _gapless_frame()
+    gapless.attrs["source"] = "yfinance"
+
+    prices_path = tmp_path / "prices.parquet"
+    meta_path = tmp_path / "meta.json"
+    write_prices(gapless, prices_path)
+    meta_path.write_text('{"existing": true}')
+
+    before_prices = prices_path.read_bytes()
+    before_meta = meta_path.read_bytes()
+
+    shrunk = gapless.iloc[:-5]
+
+    def fake_fetch(ticker, start, end=None):
+        return shrunk
+
+    monkeypatch.setattr(refresh_prices, "fetch_yfinance", fake_fetch)
+
+    exit_code = refresh_prices.main(
+        [
+            "--prices-path", str(prices_path),
+            "--meta-path", str(meta_path),
+            "--retry-wait-max", "0",
+        ]
+    )
+
+    assert exit_code == 1
+    assert prices_path.read_bytes() == before_prices
+    assert meta_path.read_bytes() == before_meta
+
+
+def test_main_first_run_without_existing_snapshot_writes(tmp_path, monkeypatch):
+    gapless = _gapless_frame()
+    gapless.attrs["source"] = "yfinance"
+
+    prices_path = tmp_path / "prices.parquet"
+    meta_path = tmp_path / "meta.json"
+    assert not prices_path.exists()
+
+    def fake_fetch(ticker, start, end=None):
+        return gapless
+
+    monkeypatch.setattr(refresh_prices, "fetch_yfinance", fake_fetch)
+
+    exit_code = refresh_prices.main(
+        [
+            "--prices-path", str(prices_path),
+            "--meta-path", str(meta_path),
+            "--retry-wait-max", "0",
+        ]
+    )
+
+    assert exit_code == 0
