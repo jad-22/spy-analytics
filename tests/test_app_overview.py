@@ -5,9 +5,12 @@ import dataclasses
 import socket
 from pathlib import Path
 
+import pandas as pd
 import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
+
+from core.config import SETTINGS
 
 # AppTest.from_file resolves relative paths against this test file's own directory, not
 # cwd, so every call below passes an absolute path rooted at the repo root.
@@ -84,3 +87,56 @@ def test_empty_state_when_data_missing(tmp_path, monkeypatch):
 
     values = [h.value for h in at.header] + [m.value for m in at.markdown]
     assert "No market data yet" in values
+
+
+def test_kpi_strip_has_four_metrics():
+    at = AppTest.from_file(OVERVIEW_PATH, default_timeout=60).run()
+    assert not at.exception
+    labels = [m.label for m in at.metric]
+    assert labels == ["YTD return", "Distance from ATH", "Current drawdown", "20D realised vol"]
+
+
+def test_candlestick_switch():
+    at = AppTest.from_file(OVERVIEW_PATH, default_timeout=60).run()
+    at.sidebar.radio(key="overview_chart_type").set_value("Candlestick").run()
+    assert not at.exception
+
+
+def test_drawdown_table_rendered():
+    at = AppTest.from_file(OVERVIEW_PATH, default_timeout=60).run()
+    assert not at.exception
+    assert len(at.dataframe) >= 1
+    first_df = at.dataframe[0].value
+    assert len(first_df) <= SETTINGS.top_drawdowns
+
+
+def test_all_regimes_and_mas():
+    at = AppTest.from_file(OVERVIEW_PATH, default_timeout=60).run()
+    at.sidebar.multiselect(key="overview_mas").set_value(list(SETTINGS.overview_ma_options)).run()
+    try:
+        regimes_widget = at.sidebar.pills(key="overview_regimes")
+    except KeyError:
+        regimes_widget = None
+    if regimes_widget is not None:
+        regimes_widget.set_value(list(SETTINGS.drawdown_regimes)).run()
+    else:
+        at.sidebar.multiselect(key="overview_regimes").set_value(
+            list(SETTINGS.drawdown_regimes)
+        ).run()
+    assert not at.exception
+
+
+def test_ma_overlay_no_warmup_gap():
+    from app.components.price_charts import price_figure
+    from app.components.store import get_prices
+    from core.indicators import MASpec
+
+    full = get_prices("total_return")
+    full_close = full["close"]
+    sma200 = MASpec.from_label("sma200").compute(full_close)
+    window = full.loc["2024-01-02":]
+    overlays = {"sma200": sma200.loc[window.index[0] : window.index[-1]]}
+
+    fig = price_figure(window, "Line", overlays, {})
+    sma_trace = next(t for t in fig.data if t.name == "SMA 200")
+    assert not pd.isna(sma_trace.y[0])
