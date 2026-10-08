@@ -22,7 +22,7 @@ class Settings:
     history_start: str = "1993-01-29"  # SPY inception; app and events use full history
     meta_path: Path = field(default=DATA_DIR / "meta.json")
     meta_schema_version: int = 1
-    detector_version: int = 0  # 0 = no event detector has run (Phase 2 bumps this)
+    detector_version: int = 1  # 1 = Phase 2 steepest-leg detector, D-01
     fetch_attempts: int = 4
     fetch_wait_min_s: float = 2.0  # seconds
     fetch_wait_max_s: float = 30.0  # seconds
@@ -60,6 +60,24 @@ class Settings:
     grid_debounce_threshold_s: float = 2.0  # D-09 profiling threshold, used in Plan 05
     split_min_years: int = 1  # minimum in-sample length after the start (D-12)
     split_min_oos_months: int = 6  # minimum out-of-sample length before the latest data
+
+    # Event detection (DET-01..07)
+    episodes_path: Path = field(default=DATA_DIR / "episodes.parquet")
+    shock_sigma_window: int = 60  # trading days, rolling sigma for shock z-score (DET-01)
+    shock_z_threshold: float = 2.5  # |log return| / lagged sigma, flags a shock day (DET-01)
+    gap_threshold: float = 0.015  # |open/prev close - 1|, flags a gap day (DET-02)
+    drawdown_threshold: float = 0.05  # peak-to-trough on closes, minimum to count as an episode
+    rally_threshold: float = 0.08  # trough-to-peak on closes, minimum to count as an episode
+    rally_window_days: int = 30  # trading days a rally must complete within (DET-03)
+    merge_window_days: int = 3  # trading-day gap tolerance for clustering primitives (DET-04)
+    search_pre_days: int = 2  # shock/gap search window: days before the cluster start
+    search_post_days: int = 1  # shock/gap search window: days after the cluster end
+    structural_search_half_width: int = 2  # drawdown/rally: days either side of the steepest day
+    severity_move_step: float = 0.05  # fraction of move_pct contributing one severity point
+    trigger_precedence: tuple[str, ...] = (
+        "drawdown", "rally", "shock", "gap",
+    )  # which kind names a multi-trigger cluster (D-01/Pitfall 4)
+    episode_count_bounds: tuple[int, int] = (100, 300)  # DET-06: 1993+ backfill, "low hundreds"
 
 
 SETTINGS = Settings()

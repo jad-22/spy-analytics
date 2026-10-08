@@ -26,6 +26,18 @@ def load_meta(path: Path) -> dict:
     return json.loads(Path(path).read_text())
 
 
+def load_episodes(path: Path) -> pd.DataFrame:
+    """Read the committed episode backfill. Lets FileNotFoundError propagate."""
+    return pd.read_parquet(path)
+
+
+def write_episodes(df: pd.DataFrame, path: Path) -> None:
+    """Write the episode backfill. Single call site: jobs/detect_events.py."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(path, index=False)
+
+
 def price_basis(raw: pd.DataFrame, basis: str) -> pd.DataFrame:
     """Return prices on the requested basis: total_return (dividends reinvested) or price_only."""
     if basis == "total_return":
