@@ -1,0 +1,163 @@
+{
+  "realtime_start": "1776-07-04",
+  "realtime_end": "9999-12-31",
+  "order_by": "release_date",
+  "sort_order": "asc",
+  "count": 38,
+  "offset": 0,
+  "limit": 10000,
+  "release_dates": [
+    {
+      "release_id": 50,
+      "date": "1993-01-01"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-02-05"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-03-05"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-04-02"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-05-07"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-06-04"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-07-02"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-08-06"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-09-03"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-10-01"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-11-05"
+    },
+    {
+      "release_id": 50,
+      "date": "1993-12-03"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-01-07"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-02-04"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-03-04"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-04-01"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-05-06"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-06-03"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-07-01"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-08-05"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-09-02"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-10-07"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-11-04"
+    },
+    {
+      "release_id": 50,
+      "date": "1994-12-02"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-01-06"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-02-03"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-03-03"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-04-07"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-05-05"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-06-02"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-07-07"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-08-04"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-09-01"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-10-06"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-11-03"
+    },
+    {
+      "release_id": 50,
+      "date": "1995-12-01"
+    },
+    {
+      "release_id": 50,
+      "date": "1996-07-05"
+    },
+    {
+      "release_id": 50,
+      "date": "1996-08-02"
+    }
+  ]
+}
