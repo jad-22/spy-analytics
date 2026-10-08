@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A nightly GitHub Actions job refreshes `data/prices.parquet` and `data/meta.json` (validated, with retries and no silent gap/shrink), commits without triggering a CI loop, and every app page reads through one cached storage module with zero network calls.
   5. New strategy rule types can be added through a `Strategy` interface without changing the Strategy Lab page.
 
-**Plans:** 1/6 plans executed
+**Plans:** 4/6 plans executed
 Plans:
 **Wave 1**
 
@@ -50,9 +50,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Nightly safety: NYSE calendar, D-13 validation gate, nightly.yml, ci.yml paths-ignore (wave 2)
-- [ ] 01-03-PLAN.md — Overview complete: KPIs, MA overlays, candlestick, drawdown regimes, drawdown table (wave 2)
-- [ ] 01-04-PLAN.md — Strategy Lab slice: Strategy protocol, Sortino/Calmar, live "N of 24" headline, equity vs B&H, metrics, Phase 0 regression test (wave 2)
+- [x] 01-02-PLAN.md — Nightly safety: NYSE calendar, D-13 validation gate, nightly.yml, ci.yml paths-ignore (wave 2)
+- [x] 01-03-PLAN.md — Overview complete: KPIs, MA overlays, candlestick, drawdown regimes, drawdown table (wave 2)
+- [x] 01-04-PLAN.md — Strategy Lab slice: Strategy protocol, Sortino/Calmar, live "N of 24" headline, equity vs B&H, metrics, Phase 0 regression test (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -121,7 +121,7 @@ Phase 2 complete. Phase 4 requires Phases 1, 2 and 3 complete.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Core engine rebuild | - | Complete | 2026-10-07 |
-| 1. Foundation, Overview & Strategy Lab | 1/6 | In Progress|  |
+| 1. Foundation, Overview & Strategy Lab | 4/6 | In Progress|  |
 | 2. Event Detection & Macro Calendar | 0/TBD | Not started | - |
 | 3. News Enrichment, Backfill & Review | 0/TBD | Not started | - |
 | 4. Event Explorer, Event Study, Methodology & Nightly Automation | 0/TBD | Not started | - |

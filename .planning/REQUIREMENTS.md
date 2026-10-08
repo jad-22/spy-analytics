@@ -9,31 +9,31 @@
 
 - [x] **DATA-01**: The price job writes SPY daily OHLCV and adjusted close from 1993-01-29 to the latest trading day to `data/prices.parquet`
 - [x] **DATA-02**: The price job pins yfinance `auto_adjust=False` and flat columns, retries on failure, and on final failure exits non-zero, leaving the last good snapshot untouched
-- [ ] **DATA-03**: The price job validates the snapshot before writing (no non-holiday gaps, no history rewritten beyond tolerance, row count never shrinks)
+- [x] **DATA-03**: The price job validates the snapshot before writing (no non-holiday gaps, no history rewritten beyond tolerance, row count never shrinks)
 - [x] **DATA-04**: `data/meta.json` records last refresh time, last trading day, row counts and detector version
 - [x] **DATA-05**: The app reads every `data/` file through one cached storage module, and no page makes a network call
 
 ### Overview
 
 - [x] **OVER-01**: Visitor can view SPY price as a line or candlestick chart over a chosen date range (sidebar)
-- [ ] **OVER-02**: Visitor can toggle SMA/EMA overlays on the price chart
-- [ ] **OVER-03**: Visitor can toggle shaded drawdown regimes (−5%, −10%, −20%)
-- [ ] **OVER-04**: Visitor sees a KPI strip: YTD return, distance from all-time high, current drawdown, 20-day realised volatility
-- [ ] **OVER-05**: Visitor sees a table of the largest drawdowns (peak, trough, recovery date, depth, days underwater)
+- [x] **OVER-02**: Visitor can toggle SMA/EMA overlays on the price chart
+- [x] **OVER-03**: Visitor can toggle shaded drawdown regimes (−5%, −10%, −20%)
+- [x] **OVER-04**: Visitor sees a KPI strip: YTD return, distance from all-time high, current drawdown, 20-day realised volatility
+- [x] **OVER-05**: Visitor sees a table of the largest drawdowns (peak, trough, recovery date, depth, days underwater)
 - [x] **OVER-06**: Visitor can switch between total-return and price-only series (sidebar)
 
 ### Strategy Lab
 
-- [ ] **LAB-01**: Visitor can pick a rule: short MA type and period, long MA type and period, optional 200D trend filter
-- [ ] **LAB-02**: Visitor can set trading cost (bps) and start/end dates
-- [ ] **LAB-03**: Visitor sees the strategy equity curve against buy-and-hold, with trades marked
-- [ ] **LAB-04**: Visitor sees a metrics table: CAGR, max drawdown, Sharpe, Sortino, Calmar, time in market, trades, for strategy and B&H
+- [x] **LAB-01**: Visitor can pick a rule: short MA type and period, long MA type and period, optional 200D trend filter
+- [x] **LAB-02**: Visitor can set trading cost (bps) and start/end dates
+- [x] **LAB-03**: Visitor sees the strategy equity curve against buy-and-hold, with trades marked
+- [x] **LAB-04**: Visitor sees a metrics table: CAGR, max drawdown, Sharpe, Sortino, Calmar, time in market, trades, for strategy and B&H
 - [ ] **LAB-05**: Visitor sees a short × long heatmap of excess return across the rule grid, with an overfitting caption (look for plateaus, not spikes)
 - [ ] **LAB-06**: Visitor sees a rolling-start robustness chart of excess return by start year
 - [ ] **LAB-07**: Visitor can set a split date and see in-sample vs out-of-sample metrics side by side
 - [ ] **LAB-08**: Visitor sees a CAGR vs max-drawdown scatter of all grid rules plus buy-and-hold
-- [ ] **LAB-09**: The default view leads with the Phase 0 headline ("0 of 24 rules beat buy-and-hold") in plain language
-- [ ] **LAB-10**: New rule types plug in through a `Strategy` interface without changes to the page
+- [x] **LAB-09**: The default view leads with the Phase 0 headline ("0 of 24 rules beat buy-and-hold") in plain language
+- [x] **LAB-10**: New rule types plug in through a `Strategy` interface without changes to the page
 
 ### Event Detection
 
@@ -94,7 +94,7 @@
 - [ ] **OPS-02**: A nightly GitHub Actions job (weekday evenings UK time) refreshes prices, detects episodes, enriches new ones and commits `data/`
 - [ ] **OPS-03**: The Anthropic API key exists only as a GitHub Actions secret
 - [ ] **OPS-04**: Nightly failures are visible (failed run, notification), and the job keeps the workflow from going stale under the 60-day inactivity rule
-- [ ] **OPS-05**: The data commit does not trigger a CI loop
+- [x] **OPS-05**: The data commit does not trigger a CI loop
 
 ## v2 Requirements
 
@@ -125,27 +125,27 @@
 |-------------|-------|--------|
 | DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Complete |
-| DATA-03 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 1 | Complete |
 | OVER-01 | Phase 1 | Complete |
-| OVER-02 | Phase 1 | Pending |
-| OVER-03 | Phase 1 | Pending |
-| OVER-04 | Phase 1 | Pending |
-| OVER-05 | Phase 1 | Pending |
+| OVER-02 | Phase 1 | Complete |
+| OVER-03 | Phase 1 | Complete |
+| OVER-04 | Phase 1 | Complete |
+| OVER-05 | Phase 1 | Complete |
 | OVER-06 | Phase 1 | Complete |
-| LAB-01 | Phase 1 | Pending |
-| LAB-02 | Phase 1 | Pending |
-| LAB-03 | Phase 1 | Pending |
-| LAB-04 | Phase 1 | Pending |
+| LAB-01 | Phase 1 | Complete |
+| LAB-02 | Phase 1 | Complete |
+| LAB-03 | Phase 1 | Complete |
+| LAB-04 | Phase 1 | Complete |
 | LAB-05 | Phase 1 | Pending |
 | LAB-06 | Phase 1 | Pending |
 | LAB-07 | Phase 1 | Pending |
 | LAB-08 | Phase 1 | Pending |
-| LAB-09 | Phase 1 | Pending |
-| LAB-10 | Phase 1 | Pending |
+| LAB-09 | Phase 1 | Complete |
+| LAB-10 | Phase 1 | Complete |
 | OPS-01 | Phase 1 | Pending |
-| OPS-05 | Phase 1 | Pending |
+| OPS-05 | Phase 1 | Complete |
 | DET-01 | Phase 2 | Pending |
 | DET-02 | Phase 2 | Pending |
 | DET-03 | Phase 2 | Pending |

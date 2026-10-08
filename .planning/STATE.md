@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-10-07T23:54:30.137Z"
-last_activity: 2026-10-07
+last_updated: "2026-10-08T01:43:33.214Z"
+last_activity: 2026-10-08
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 4
   percent: 0
 ---
 
@@ -27,11 +27,11 @@ look-ahead, total-return prices and costs, event explanations cite in-window sou
 ## Current Position
 
 Phase: 01 (foundation-overview-strategy-lab) — EXECUTING
-Plan: 2 of 6
+Plan: 5 of 6
 Status: Ready to execute
-Last activity: 2026-10-07
+Last activity: 2026-10-08
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ None yet.
 - Phase 3: Model ID (`claude-haiku-5-5` in research STACK.md) and its pricing are unverified against official Anthropic docs — must confirm before scoping or running the backfill (see ROADMAP.md Phase 3, Success Criterion 1).
 - Phase 1: Stooq fallback is confirmed broken (CAPTCHA-gated endpoint) — nightly price job should rely on yfinance + retries + last-good-snapshot, not a second scraped fallback.
 - Phase 1: Verify `st.plotly_chart(on_select="rerun")` actually fires on the Strategy Lab heatmap (documented Streamlit gaps exist for imshow/heatmap selection); have a table-row fallback ready.
+- Nightly D-13 gate rejected a local refresh: Yahoo revised 2026-10-07 volume by ~0.69% (OHLC exact). Decide volume tolerance before relying on nightly.yml (see 01-02-SUMMARY).
 
 ## Deferred Items
 
