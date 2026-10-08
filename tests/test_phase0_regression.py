@@ -17,8 +17,8 @@ import pytest
 
 from core.config import SETTINGS
 from core.grid import count_beating, default_pairs, evaluate_strategy, run_ma_grid
-from core.signals import MACrossoverStrategy
 from core.indicators import MASpec
+from core.signals import MACrossoverStrategy
 from core.storage import load_prices, price_basis
 
 WINDOW_START = "2010-10-19"
