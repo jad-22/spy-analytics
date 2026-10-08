@@ -28,10 +28,10 @@
 - [x] **LAB-02**: Visitor can set trading cost (bps) and start/end dates
 - [x] **LAB-03**: Visitor sees the strategy equity curve against buy-and-hold, with trades marked
 - [x] **LAB-04**: Visitor sees a metrics table: CAGR, max drawdown, Sharpe, Sortino, Calmar, time in market, trades, for strategy and B&H
-- [ ] **LAB-05**: Visitor sees a short × long heatmap of excess return across the rule grid, with an overfitting caption (look for plateaus, not spikes)
-- [ ] **LAB-06**: Visitor sees a rolling-start robustness chart of excess return by start year
-- [ ] **LAB-07**: Visitor can set a split date and see in-sample vs out-of-sample metrics side by side
-- [ ] **LAB-08**: Visitor sees a CAGR vs max-drawdown scatter of all grid rules plus buy-and-hold
+- [x] **LAB-05**: Visitor sees a short × long heatmap of excess return across the rule grid, with an overfitting caption (look for plateaus, not spikes)
+- [x] **LAB-06**: Visitor sees a rolling-start robustness chart of excess return by start year
+- [x] **LAB-07**: Visitor can set a split date and see in-sample vs out-of-sample metrics side by side
+- [x] **LAB-08**: Visitor sees a CAGR vs max-drawdown scatter of all grid rules plus buy-and-hold
 - [x] **LAB-09**: The default view leads with the Phase 0 headline ("0 of 24 rules beat buy-and-hold") in plain language
 - [x] **LAB-10**: New rule types plug in through a `Strategy` interface without changes to the page
 
@@ -138,10 +138,10 @@
 | LAB-02 | Phase 1 | Complete |
 | LAB-03 | Phase 1 | Complete |
 | LAB-04 | Phase 1 | Complete |
-| LAB-05 | Phase 1 | Pending |
-| LAB-06 | Phase 1 | Pending |
-| LAB-07 | Phase 1 | Pending |
-| LAB-08 | Phase 1 | Pending |
+| LAB-05 | Phase 1 | Complete |
+| LAB-06 | Phase 1 | Complete |
+| LAB-07 | Phase 1 | Complete |
+| LAB-08 | Phase 1 | Complete |
 | LAB-09 | Phase 1 | Complete |
 | LAB-10 | Phase 1 | Complete |
 | OPS-01 | Phase 1 | Pending |

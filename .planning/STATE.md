@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-10-08T01:43:33.214Z"
+last_updated: "2026-10-08T02:11:24.393Z"
 last_activity: 2026-10-08
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -27,11 +27,11 @@ look-ahead, total-return prices and costs, event explanations cite in-window sou
 ## Current Position
 
 Phase: 01 (foundation-overview-strategy-lab) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-10-08
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [███████░░░] 67%
 
 *Updated after each plan completion*
 | Phase 01 P01 | 14min | 4 tasks | 22 files |
+| Phase 01 P05 | 17m | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,7 @@ Recent decisions affecting current work:
 - Roadmap: Phases 1 and 2 have no dependency and may be planned/executed in parallel; Phase 3 (LLM backfill, irreversible spend) is gated on Phase 2's episode-ID-stability replay test; Phase 4 needs real enriched data from Phase 3 before Event Explorer/Study are demo-worthy.
 - [Phase 01]: Phase 1 Plan 01: tenacity.Retrying used as a callable (not @retry decorator) so fetch_with_retry calls the bare module-level fetch_yfinance name, letting tests monkeypatch it directly
 - [Phase 01]: Phase 1 Plan 01: app/components/store.py functions read SETTINGS as a module-level global at call time (not a bound default), so tests can monkeypatch store.SETTINGS to point at a missing snapshot for the empty-state test
+- [Phase 01]: D-09 resolved by measurement: naive heatmap_grid was 2.70s cold-sum (DEBOUNCE NEEDED); two numerically-neutral vectorisations (shared per-period MA computation, skipping unused summarise() ratios) brought it to 1.49s against the 2.0s threshold -- REACTIVE OK, no st.form debounce added
 
 ### Pending Todos
 
@@ -88,6 +90,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-07T23:54:30.125Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-10-08T02:11:24.378Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None
