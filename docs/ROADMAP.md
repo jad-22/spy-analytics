@@ -7,7 +7,7 @@ were rebuilt from the rest of the spec. Sizes are relative (S/M/L).
 | Phase | Goal | Size | Status |
 | --- | --- | --- | --- |
 | 0 | Correct core engine and re-run the notebook | M | **Done** (2026-10-07) |
-| 1 | MVP app: Overview + Strategy Lab on Streamlit Cloud | M | Next (gate pending deploy) |
+| 1 | MVP app: Overview + Strategy Lab on Streamlit Cloud | M | **Done** (2026-10-08) |
 | 2 | Event detection (shock, gap, drawdown, rally) + macro calendar | M | Can overlap with 1 |
 | 3 | News enrichment, one-off backfill, manual review | L | |
 | 4 | Event Explorer, Event Study, Methodology, nightly automation | M | |
@@ -47,8 +47,8 @@ runtime.
    touching the page (`MACrossoverStrategy`).
 8. [ ] Stub `5_Methodology.py` with Phase 0 findings and the disclaimer — moved to Phase 4
    (METH-01..03) per `.planning/ROADMAP.md`.
-9. [ ] `.streamlit/config.toml` (done), deploy to Streamlit Community Cloud, add URL to
-   README.
+9. [x] `.streamlit/config.toml` (done), deploy to Streamlit Community Cloud, add URL to
+   README. Live at https://spy-market-analytics.streamlit.app/.
 
 **Gate:** the app is deployed, every chart reads only from `data/`, and the Strategy Lab
 reproduces the `PHASE0_FINDINGS.md` numbers for the same inputs (covered by a test).
@@ -102,5 +102,5 @@ for accessibility and copy.
       Resolved: app history starts 1993-01-29 (DATA-01); Phase 0 findings stay on the
       notebook's 2010 window.
 - [ ] Macro calendar: US-only, or add BoE/ECB? **Before Phase 2.**
-- [ ] Public or private GitHub repo? **Before Phase 1 deploy.** Streamlit Community Cloud works
-      with both.
+- [x] Public or private GitHub repo? **Before Phase 1 deploy.** Streamlit Community Cloud works
+      with both. Resolved: public (OPS-01) — https://github.com/jad-22/spy-analytics.

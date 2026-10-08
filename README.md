@@ -11,7 +11,9 @@ spike annotated with sourced world news.
 
 ## Live app
 
-(URL added after deploy — see `docs/ROADMAP.md` Phase 1 status)
+[spy-market-analytics.streamlit.app](https://spy-market-analytics.streamlit.app/) — Streamlit
+Community Cloud sleeps the app after a period of inactivity; the first visit after a sleep may
+take a moment to wake it back up (accepted, not mitigated with a keep-alive pinger).
 
 Run locally: `python -m streamlit run app/Home.py`
 
