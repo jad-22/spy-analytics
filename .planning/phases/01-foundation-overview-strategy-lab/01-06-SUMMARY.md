@@ -196,3 +196,15 @@ Cloud deploy, no secrets). No further action needed to use the app as shipped.
 All claimed files found on disk (README.md, docs/ROADMAP.md,
 .planning/phases/01-foundation-overview-strategy-lab/01-06-SUMMARY.md); both claimed commit
 hashes (16fbffe, e8528ae) found in git log.
+
+## Post-Summary Resolution (2026-10-08)
+
+The user chose to exempt volume from the D-13 rewrite check. Volume feeds no backtest
+or metric; open/high/low/close and adj_close stay guarded at 0.01%.
+
+- Fix: `99b5953` fix(01-02): exempt volume from the D-13 rewrite tolerance. In it,
+  `tests/test_validate_snapshot.py::test_volume_revision_passes` replaces the old
+  volume-rejection test. It was confirmed failing before the fix and passing after.
+- Live nightly re-run [`37763263924`](https://github.com/jad-22/spy-analytics/actions/runs/37763263924):
+  **success**. It committed `f56c43a` "data: nightly price refresh".
+- OPS-05 CI-loop guard verified live. No `ci` workflow run was triggered by `f56c43a`.
