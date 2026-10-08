@@ -19,7 +19,8 @@ from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from core.config import SETTINGS
 from core.data import fetch_yfinance, write_prices
-from core.storage import build_meta, write_meta
+from core.storage import build_meta, load_prices, write_meta
+from core.validate import drop_incomplete_session, validate_snapshot
 
 
 def fetch_with_retry(
@@ -45,7 +46,7 @@ def fetch_with_retry(
 
 
 def _write_snapshot(df: pd.DataFrame, prices_path: Path, meta_path: Path) -> None:
-    """Single call site for the write path. Plan 02 inserts the D-13 validation gate here."""
+    """Single call site for the write path. Callers must validate before calling this."""
     write_prices(df, prices_path)
     write_meta(
         build_meta(
@@ -77,7 +78,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"price refresh failed: {exc}; keeping last snapshot", file=sys.stderr)
         return 1
 
-    _write_snapshot(df, Path(args.prices_path), Path(args.meta_path))
+    df = drop_incomplete_session(df, pd.Timestamp.now(tz="UTC"), SETTINGS)
+
+    prices_path = Path(args.prices_path)
+    old = load_prices(prices_path) if prices_path.exists() else None
+
+    try:
+        validate_snapshot(df, old, SETTINGS)
+    except ValueError as exc:
+        print(f"snapshot rejected: {exc}; keeping last snapshot", file=sys.stderr)
+        return 1
+
+    _write_snapshot(df, prices_path, Path(args.meta_path))
     print(
         f"wrote {len(df)} rows ({df.index[0].date()} to {df.index[-1].date()}) "
         f"to {args.prices_path}"
