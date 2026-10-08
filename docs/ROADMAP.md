@@ -7,7 +7,7 @@ were rebuilt from the rest of the spec. Sizes are relative (S/M/L).
 | Phase | Goal | Size | Status |
 | --- | --- | --- | --- |
 | 0 | Correct core engine and re-run the notebook | M | **Done** (2026-10-07) |
-| 1 | MVP app: Overview + Strategy Lab on Streamlit Cloud | M | Next |
+| 1 | MVP app: Overview + Strategy Lab on Streamlit Cloud | M | Next (gate pending deploy) |
 | 2 | Event detection (shock, gap, drawdown, rally) + macro calendar | M | Can overlap with 1 |
 | 3 | News enrichment, one-off backfill, manual review | L | |
 | 4 | Event Explorer, Event Study, Methodology, nightly automation | M | |
@@ -29,19 +29,26 @@ were rebuilt from the rest of the spec. Sizes are relative (S/M/L).
 Goal: a public URL showing price context and an honest MA backtest, with no external calls at
 runtime.
 
-1. `core/storage.py`: cached readers for every `data/` file (prices first), plus `meta.json`.
-2. `jobs/refresh_prices.py`: fetch, validate (row count, no gaps beyond holidays, Stooq vs
-   yfinance check), write `data/prices.parquet` and `data/meta.json`.
-3. `core/regimes.py` (or in `metrics.py`): drawdown series, regime shading (−5/−10/−20%),
-   KPI calcs (YTD, distance from ATH, current drawdown, 20D realised vol).
-4. `app/Home.py`, `app/components/sidebar.py` (date range, price basis), `charts.py`.
-5. `app/pages/1_Overview.py`: price chart (line/candle), MA overlays, regime toggle, KPI strip.
-6. `app/pages/2_Strategy_Lab.py`: rule picker, trend filter, cost slider, equity vs B&H,
+1. [x] `core/storage.py`: cached readers for every `data/` file (prices first), plus `meta.json`.
+2. [x] `jobs/refresh_prices.py`: fetch, validate — yfinance-only; D-13 validation gate
+   (row count, last date, OHLCV rewrite tolerance, missing-session gap, via
+   `core/validate.py` and `core/market_calendar.py`) — write `data/prices.parquet` and
+   `data/meta.json`.
+3. [x] `core/regimes.py`: drawdown series, regime shading (−5/−10/−20%), KPI calcs (YTD,
+   distance from ATH, current drawdown, 20D realised vol).
+4. [x] `app/Home.py`, `app/components/sidebar.py` (date range, price basis), `theme.py`,
+   `price_charts.py`.
+5. [x] `app/views/overview.py`: price chart (line/candle), MA overlays, regime toggle, KPI
+   strip, largest-drawdowns table.
+6. [x] `app/views/strategy_lab.py`: rule picker, trend filter, cost slider, equity vs B&H,
    metrics table, short × long heatmap, rolling-start chart, in-sample / out-of-sample split.
-7. `core/backtest.py` additions: IS/OOS split helper. Add a `Strategy` protocol in
-   `signals.py` so new rules plug in without touching the page.
-8. Stub `5_Methodology.py` with Phase 0 findings and the disclaimer.
-9. `.streamlit/config.toml`, deploy to Streamlit Community Cloud, add URL to README.
+7. [x] `core/grid.py` additions: IS/OOS split helper (`is_oos_split`), heatmap grid
+   (`heatmap_grid`). `Strategy` protocol in `signals.py` so new rules plug in without
+   touching the page (`MACrossoverStrategy`).
+8. [ ] Stub `5_Methodology.py` with Phase 0 findings and the disclaimer — moved to Phase 4
+   (METH-01..03) per `.planning/ROADMAP.md`.
+9. [ ] `.streamlit/config.toml` (done), deploy to Streamlit Community Cloud, add URL to
+   README.
 
 **Gate:** the app is deployed, every chart reads only from `data/`, and the Strategy Lab
 reproduces the `PHASE0_FINDINGS.md` numbers for the same inputs (covered by a test).
@@ -90,8 +97,10 @@ for accessibility and copy.
 
 ## Open questions (from spec; decide before the phase noted)
 
-- [ ] History start: 2010 (matches notebook) or 1993 (adds 2000 and 2008)? **Before Phase 2**:
+- [x] History start: 2010 (matches notebook) or 1993 (adds 2000 and 2008)? **Before Phase 2**:
       it changes episode count and backfill cost. It also changes the Phase 1 default range.
+      Resolved: app history starts 1993-01-29 (DATA-01); Phase 0 findings stay on the
+      notebook's 2010 window.
 - [ ] Macro calendar: US-only, or add BoE/ECB? **Before Phase 2.**
 - [ ] Public or private GitHub repo? **Before Phase 1 deploy.** Streamlit Community Cloud works
       with both.
