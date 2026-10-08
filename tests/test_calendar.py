@@ -11,15 +11,19 @@ import pytest
 import requests
 
 from core.calendar import (
+    CALENDAR_COLUMNS,
+    TAG_COLUMNS,
     drop_non_release_dates,
     merge_calendar,
     parse_fomc_calendars,
     parse_fomc_historical,
     parse_fred_release_dates,
+    tag_episodes,
     validate_macro_calendar,
 )
 from core.config import SETTINGS
 from core.data import fetch_fred_release_dates, fetch_fred_release_name
+from core.events import EPISODE_COLUMNS
 
 SENTINEL_KEY = "TESTKEY-DO-NOT-LEAK"
 
@@ -392,6 +396,142 @@ def test_validate_macro_calendar_raises_on_monthly_release_count_out_of_bounds()
     df = df[df["release"] != "CPI"].reset_index(drop=True)
     with pytest.raises(ValueError, match="CPI"):
         validate_macro_calendar(df, _settings_for_validate(), pd.Timestamp("2001-01-01"))
+
+
+# --- tag_episodes (CAL-02) -------------------------------------------------------------
+
+def _cal_row(date, release, release_type="release", scheduled=True, url="https://u/cal"):
+    return {
+        "date": pd.Timestamp(date), "release": release, "release_type": release_type,
+        "scheduled": scheduled, "source_url": url,
+    }
+
+
+def _calendar_frame(rows: list[dict]) -> pd.DataFrame:
+    return pd.DataFrame(rows, columns=CALENDAR_COLUMNS)
+
+
+def _episode_row(
+    search_from, search_to, episode_id="2020-03-16_drawdown", start=None, end=None
+):
+    start = pd.Timestamp(start or search_from)
+    end = pd.Timestamp(end or search_to)
+    return {
+        "episode_id": episode_id,
+        "start_date": start,
+        "end_date": end,
+        "anchor_date": start,
+        "direction": "down",
+        "trigger": "drawdown",
+        "triggers": "drawdown",
+        "move_pct": -0.10,
+        "max_z": 3.0,
+        "severity": 5.0,
+        "search_from": pd.Timestamp(search_from),
+        "search_to": pd.Timestamp(search_to),
+        "recovery_date": pd.NaT,
+        "status": "closed",
+        "detector_version": SETTINGS.detector_version,
+    }
+
+
+def _episodes_frame(rows: list[dict]) -> pd.DataFrame:
+    return pd.DataFrame(rows, columns=EPISODE_COLUMNS)
+
+
+def test_tag_episodes_scheduled_beats_unscheduled_and_excludes_out_of_window():
+    episodes = _episodes_frame([_episode_row("2020-03-12", "2020-03-18")])
+    calendar = _calendar_frame(
+        [
+            _cal_row("2020-03-11", "CPI"),  # before window: excluded entirely
+            _cal_row("2020-03-15", "FOMC", release_type="unscheduled", scheduled=False),
+            _cal_row("2020-03-18", "FOMC", release_type="meeting", scheduled=True),
+        ]
+    )
+    tagged = tag_episodes(episodes, calendar)
+    row = tagged.iloc[0]
+    assert list(row["scheduled_releases"]) == ["FOMC 2020-03-18"]
+    assert list(row["unscheduled_releases"]) == ["FOMC 2020-03-15"]
+    assert row["catalyst"] == "scheduled"
+
+
+def test_tag_episodes_unscheduled_only_is_surprise():
+    episodes = _episodes_frame([_episode_row("2020-03-12", "2020-03-18")])
+    calendar = _calendar_frame(
+        [_cal_row("2020-03-15", "FOMC", release_type="unscheduled", scheduled=False)]
+    )
+    tagged = tag_episodes(episodes, calendar)
+    row = tagged.iloc[0]
+    assert list(row["scheduled_releases"]) == []
+    assert list(row["unscheduled_releases"]) == ["FOMC 2020-03-15"]
+    assert row["catalyst"] == "surprise"
+
+
+def test_tag_episodes_nothing_in_window_is_surprise_with_empty_lists():
+    episodes = _episodes_frame([_episode_row("2020-03-12", "2020-03-18")])
+    calendar = _calendar_frame([_cal_row("2020-01-01", "CPI")])
+    tagged = tag_episodes(episodes, calendar)
+    row = tagged.iloc[0]
+    assert list(row["scheduled_releases"]) == []
+    assert list(row["unscheduled_releases"]) == []
+    assert row["catalyst"] == "surprise"
+
+
+def test_tag_episodes_window_bounds_are_inclusive():
+    episodes = _episodes_frame([_episode_row("2020-03-12", "2020-03-18")])
+    calendar = _calendar_frame(
+        [
+            _cal_row("2020-03-12", "CPI"),  # exactly search_from
+            _cal_row("2020-03-18", "payrolls"),  # exactly search_to
+        ]
+    )
+    tagged = tag_episodes(episodes, calendar)
+    row = tagged.iloc[0]
+    assert list(row["scheduled_releases"]) == ["CPI 2020-03-12", "payrolls 2020-03-18"]
+    assert row["catalyst"] == "scheduled"
+
+
+def test_tag_episodes_multiple_releases_sorted_by_date_then_release():
+    episodes = _episodes_frame([_episode_row("2020-03-01", "2020-03-31")])
+    calendar = _calendar_frame(
+        [
+            _cal_row("2020-03-15", "payrolls"),
+            _cal_row("2020-03-15", "CPI"),
+            _cal_row("2020-03-02", "FOMC", release_type="unscheduled", scheduled=False),
+        ]
+    )
+    tagged = tag_episodes(episodes, calendar)
+    row = tagged.iloc[0]
+    assert list(row["scheduled_releases"]) == ["CPI 2020-03-15", "payrolls 2020-03-15"]
+    assert list(row["unscheduled_releases"]) == ["FOMC 2020-03-02"]
+
+
+def test_tag_episodes_does_not_mutate_inputs_preserves_order_and_appends_columns():
+    rows = [
+        _episode_row("2020-03-12", "2020-03-18", episode_id="a", start="2020-03-13", end="2020-03-17"),
+        _episode_row("1993-02-01", "1993-02-05", episode_id="b", start="1993-02-02", end="1993-02-04"),
+    ]
+    episodes = _episodes_frame(rows)
+    episodes_copy = episodes.copy(deep=True)
+    calendar = _calendar_frame([_cal_row("2020-03-15", "FOMC", release_type="unscheduled", scheduled=False)])
+    calendar_copy = calendar.copy(deep=True)
+
+    tagged = tag_episodes(episodes, calendar)
+
+    pd.testing.assert_frame_equal(episodes, episodes_copy)
+    pd.testing.assert_frame_equal(calendar, calendar_copy)
+    assert list(tagged["episode_id"]) == ["a", "b"]
+    assert list(tagged.columns)[: len(EPISODE_COLUMNS)] == EPISODE_COLUMNS
+    assert list(tagged.columns)[len(EPISODE_COLUMNS):] == list(TAG_COLUMNS)
+
+
+def test_tag_episodes_raises_on_calendar_missing_column():
+    episodes = _episodes_frame([_episode_row("2020-03-12", "2020-03-18")])
+    bad_calendar = _calendar_frame(
+        [_cal_row("2020-03-15", "FOMC", release_type="unscheduled", scheduled=False)]
+    ).drop(columns=["scheduled"])
+    with pytest.raises(ValueError):
+        tag_episodes(episodes, bad_calendar)
 
 
 # --- secret-leak hardening (D-02, T-02-09) -----------------------------------------------

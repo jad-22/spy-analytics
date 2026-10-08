@@ -10,6 +10,7 @@ import shutil
 import pandas as pd
 import pytest
 
+from core.calendar import TAG_COLUMNS
 from core.config import SETTINGS
 from core.events import EPISODE_COLUMNS
 from core.storage import load_episodes, load_meta
@@ -43,6 +44,7 @@ def episodes(tmp_path_factory, tmp_meta_path):
             "--prices-path", str(SETTINGS.prices_path),
             "--episodes-path", str(episodes_path),
             "--meta-path", str(tmp_meta_path),
+            "--calendar-path", str(SETTINGS.macro_calendar_path),
         ]
     )
     assert exit_code == 0
@@ -91,3 +93,51 @@ def test_feb_and_q4_2018_are_separate(episodes):
 def test_meta_detector_version_bumped(tmp_meta_path):
     meta = load_meta(tmp_meta_path)
     assert meta["detector_version"] == SETTINGS.detector_version == 1
+
+
+# --- CAL-02 tagging (02-05) --------------------------------------------------------------
+
+def test_episodes_carry_tag_columns(episodes):
+    assert list(episodes.columns)[len(EPISODE_COLUMNS):] == list(TAG_COLUMNS)
+
+
+def test_tagged_release_dates_lie_within_search_window(episodes):
+    for _, row in episodes.iterrows():
+        for entry in list(row["scheduled_releases"]) + list(row["unscheduled_releases"]):
+            date_str = entry.rsplit(" ", 1)[1]
+            date = pd.Timestamp(date_str)
+            assert row["search_from"] <= date <= row["search_to"], (
+                f"{row['episode_id']}: {entry!r} outside "
+                f"[{row['search_from'].date()}, {row['search_to'].date()}]"
+            )
+
+
+def test_catalyst_is_scheduled_iff_scheduled_releases_nonempty(episodes):
+    has_scheduled = episodes["scheduled_releases"].apply(lambda x: len(x) > 0)
+    assert (episodes["catalyst"] == "scheduled").equals(has_scheduled)
+    assert set(episodes["catalyst"].unique()) <= {"scheduled", "surprise"}
+
+
+def test_mar_2020_episode_lists_emergency_fomc_as_unscheduled(episodes):
+    probe_date = pd.Timestamp("2020-03-16")
+    matches = episodes[
+        (episodes["start_date"] <= probe_date) & (probe_date <= episodes["end_date"])
+    ]
+    assert len(matches) == 1
+    row = matches.iloc[0]
+    assert "FOMC 2020-03-15" in list(row["unscheduled_releases"])
+    assert "FOMC 2020-03-15" not in list(row["scheduled_releases"])
+
+
+def test_main_fails_without_touching_data_when_calendar_missing(tmp_path, tmp_meta_path):
+    episodes_path = tmp_path / "episodes.parquet"
+    exit_code = detect_events.main(
+        [
+            "--prices-path", str(SETTINGS.prices_path),
+            "--episodes-path", str(episodes_path),
+            "--meta-path", str(tmp_meta_path),
+            "--calendar-path", str(tmp_path / "missing_calendar.parquet"),
+        ]
+    )
+    assert exit_code == 1
+    assert not episodes_path.exists()
