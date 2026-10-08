@@ -90,6 +90,27 @@ class Settings:
         ("payrolls", 50, "Employment Situation"),
     )  # (release label, FRED release_id, expected name substring -- RESEARCH A1 confirmed live)
     fred_source_url_template: str = "https://alfred.stlouisfed.org/releases/calendar?rid={rid}&y={year}"
+    # FRED release/dates lists every day new data was published, not just the scheduled
+    # print. These (release, date) pairs are not prints -- found from the full 1993-2026
+    # live lists in 02-04. Each is the second date in a month that already has one.
+    fred_non_release_dates: tuple[tuple[str, str], ...] = (
+        # BLS annual seasonal-factor update, 2-6 days before January's CPI each February
+        ("CPI", "2005-02-18"), ("CPI", "2006-02-17"), ("CPI", "2007-02-16"),
+        ("CPI", "2008-02-15"), ("CPI", "2009-02-18"), ("CPI", "2010-02-17"),
+        ("CPI", "2011-02-15"), ("CPI", "2012-02-15"), ("CPI", "2013-02-19"),
+        ("CPI", "2014-02-18"), ("CPI", "2015-02-20"), ("CPI", "2017-02-13"),
+        ("CPI", "2019-02-11"), ("CPI", "2020-02-11"), ("CPI", "2021-02-08"),
+        ("CPI", "2022-02-08"), ("CPI", "2023-02-10"), ("CPI", "2024-02-09"),
+        # Off-cycle 2000 dates; the same months' mid-month dates fit the regular schedule
+        ("CPI", "2000-02-29"), ("CPI", "2000-09-28"),
+        # Employment Situation revisions; the first-Friday report earlier that month stays
+        ("payrolls", "2002-12-09"), ("payrolls", "2003-10-10"), ("payrolls", "2006-05-08"),
+        ("payrolls", "2012-12-12"), ("payrolls", "2013-05-06"), ("payrolls", "2020-05-11"),
+        ("payrolls", "2024-01-10"), ("payrolls", "2024-08-21"),  # 08-21: prelim. benchmark
+    )
+    # Months with two genuine prints. 1996-02: the shutdown-delayed December 1995 CPI
+    # (02-01; January 1996 has no release) and the January CPI (02-28).
+    fred_double_release_months: tuple[tuple[str, str], ...] = (("CPI", "1996-02"),)
     fomc_historical_url_template: str = (
         "https://www.federalreserve.gov/monetarypolicy/fomchistorical{year}.htm"
     )

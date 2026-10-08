@@ -21,7 +21,7 @@ from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from core.calendar import (
     CALENDAR_COLUMNS,
-    first_release_per_month,
+    drop_non_release_dates,
     merge_calendar,
     parse_fomc_calendars,
     parse_fomc_historical,
@@ -110,12 +110,12 @@ def main(argv: list[str] | None = None) -> int:
                 fetch_fred_release_dates, release_id, key, SETTINGS.calendar_start,
                 SETTINGS.fred_api_url, SETTINGS.http_timeout_s,
             )
-            kept, dropped = first_release_per_month(
-                parse_fred_release_dates(payload, label, release_id, SETTINGS.fred_source_url_template)
+            kept, dropped = drop_non_release_dates(
+                parse_fred_release_dates(payload, label, release_id, SETTINGS.fred_source_url_template),
+                SETTINGS.fred_non_release_dates,
             )
             if len(dropped):
-                shown = ", ".join(dropped["date"].dt.strftime("%Y-%m-%d"))
-                print(f"{label}: dropped {len(dropped)} off-cycle revision date(s): {shown}")
+                print(f"{label}: dropped {len(dropped)} listed non-print date(s)")
             fred_frames.append(kept)
 
         fresh = pd.concat(historical_frames + fred_frames, ignore_index=True)[CALENDAR_COLUMNS]

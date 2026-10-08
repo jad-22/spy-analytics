@@ -11,7 +11,7 @@ import pytest
 import requests
 
 from core.calendar import (
-    first_release_per_month,
+    drop_non_release_dates,
     merge_calendar,
     parse_fomc_calendars,
     parse_fomc_historical,
@@ -169,51 +169,78 @@ def test_parse_fred_release_dates_raises_on_zero_rows():
         parse_fred_release_dates(payload, "CPI", 10, SETTINGS.fred_source_url_template)
 
 
-# --- first_release_per_month (02-04 live-run fix) ----------------------------------------
+# --- drop_non_release_dates + one-per-month guard (02-04 live-run fix) ------------------
 
-# Exact live FRED release/dates output for the two years that failed the 10-13/year
-# check in the first real 02-04 run.
-LIVE_CPI_2000 = [
-    "2000-01-14", "2000-02-18", "2000-02-29", "2000-03-17", "2000-04-14", "2000-05-16",
-    "2000-06-14", "2000-07-18", "2000-08-16", "2000-09-15", "2000-09-28", "2000-10-18",
-    "2000-11-16", "2000-12-15",
-]
-LIVE_PAYROLLS_2024 = [
-    "2024-01-05", "2024-01-10", "2024-02-02", "2024-03-08", "2024-04-05", "2024-05-03",
-    "2024-06-07", "2024-07-05", "2024-08-02", "2024-08-21", "2024-09-06", "2024-10-04",
-    "2024-11-01", "2024-12-06",
-]
+# Full live FRED release/dates lists (dates only), captured in 02-04.
+LIVE_FRED = json.loads((FIXTURES / "fred_live_release_dates.json").read_text())
+RID = {"CPI": 10, "payrolls": 50}
 
 
-def _fred_frame(dates: list[str], label: str, rid: int) -> pd.DataFrame:
-    payload = {"count": len(dates), "release_dates": [{"release_id": rid, "date": d} for d in dates]}
-    return parse_fred_release_dates(payload, label, rid, SETTINGS.fred_source_url_template)
+def _fred_frame(dates: list[str], label: str) -> pd.DataFrame:
+    payload = {
+        "count": len(dates),
+        "release_dates": [{"release_id": RID[label], "date": d} for d in dates],
+    }
+    return parse_fred_release_dates(payload, label, RID[label], SETTINGS.fred_source_url_template)
 
 
-@pytest.mark.parametrize(
-    ("dates", "label", "rid", "revisions"),
-    [
-        (LIVE_CPI_2000, "CPI", 10, ["2000-02-29", "2000-09-28"]),
-        (LIVE_PAYROLLS_2024, "payrolls", 50, ["2024-01-10", "2024-08-21"]),
-    ],
-)
-def test_first_release_per_month_drops_live_off_cycle_revisions(dates, label, rid, revisions):
-    kept, dropped = first_release_per_month(_fred_frame(dates, label, rid))
-    assert dropped["date"].dt.strftime("%Y-%m-%d").tolist() == revisions
-    assert len(kept) == 12
-    assert kept["date"].dt.month.tolist() == list(range(1, 13))
-    assert list(kept.columns) == list(dropped.columns)
+def _live_kept(label: str) -> pd.DataFrame:
+    kept, _ = drop_non_release_dates(_fred_frame(LIVE_FRED[label], label), SETTINGS.fred_non_release_dates)
+    return kept
 
 
-def test_first_release_per_month_is_per_release():
-    """CPI and payrolls in the same month are different releases; both survive."""
-    df = pd.concat(
-        [_fred_frame(["2000-01-07"], "payrolls", 50), _fred_frame(["2000-01-14"], "CPI", 10)],
+def test_drop_non_release_dates_keeps_january_cpi_print_not_seasonal_factors():
+    """The first fix kept the earliest date per month, which kept BLS's seasonal-factor
+    update and dropped the real January CPI print in 2005-2024."""
+    dates = set(_live_kept("CPI")["date"].dt.strftime("%Y-%m-%d"))
+    for real, seasonal in [("2024-02-13", "2024-02-09"), ("2015-02-26", "2015-02-20"),
+                           ("2005-02-23", "2005-02-18")]:
+        assert real in dates
+        assert seasonal not in dates
+    assert {"1996-02-01", "1996-02-28"} <= dates  # both genuine (shutdown backlog)
+
+
+def test_drop_non_release_dates_returns_exactly_the_listed_live_dates():
+    for label in ("CPI", "payrolls"):
+        _, dropped = drop_non_release_dates(
+            _fred_frame(LIVE_FRED[label], label), SETTINGS.fred_non_release_dates
+        )
+        listed = sorted(d for lab, d in SETTINGS.fred_non_release_dates if lab == label)
+        assert dropped["date"].dt.strftime("%Y-%m-%d").tolist() == listed
+
+
+@pytest.mark.parametrize("label", ["CPI", "payrolls"])
+def test_live_fred_lists_pass_count_and_one_per_month_rules(label):
+    kept = _live_kept(label)
+    lo, hi = SETTINGS.monthly_releases_per_year
+    per_year = kept[kept["date"].dt.year <= 2025].groupby(kept["date"].dt.year).size()
+    assert per_year.between(lo, hi).all(), per_year[~per_year.between(lo, hi)]
+    months = kept["date"].dt.strftime("%Y-%m")
+    doubles = {(label, m) for m, n in months.value_counts().items() if n > 1}
+    assert doubles <= set(SETTINGS.fred_double_release_months)
+
+
+def _valid_calendar() -> pd.DataFrame:
+    fomc = parse_fomc_historical(_read("fomchistorical2015.htm"), 2015, "https://u/2015")
+    fred = pd.concat(
+        [_fred_frame([d for d in LIVE_FRED[lab] if d.startswith("2015")], lab) for lab in RID],
         ignore_index=True,
     )
-    kept, dropped = first_release_per_month(df)
-    assert len(kept) == 2
-    assert dropped.empty
+    fred, _ = drop_non_release_dates(fred, SETTINGS.fred_non_release_dates)
+    return pd.concat([fomc, fred], ignore_index=True).sort_values(
+        ["date", "release", "release_type"]
+    ).reset_index(drop=True)
+
+
+def test_validate_one_per_month_guard_rejects_unlisted_second_date():
+    settings = replace(SETTINGS, calendar_start="2015-01-01", calendar_first_release_by="2015-02-28")
+    df = _valid_calendar()
+    validate_macro_calendar(df, settings, "2016-01-01")  # the clean frame passes
+
+    extra = _fred_frame(["2015-03-30"], "CPI")  # second CPI date in March 2015
+    bad = pd.concat([df, extra], ignore_index=True)
+    with pytest.raises(ValueError, match="more than one release in a month"):
+        validate_macro_calendar(bad, settings, "2016-01-01")
 
 
 # --- merge_calendar (D-03 idempotency) -------------------------------------------------

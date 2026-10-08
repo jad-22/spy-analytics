@@ -200,22 +200,24 @@ def parse_fred_release_dates(
     return _frame(rows)
 
 
-def first_release_per_month(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Keep each release's earliest date per calendar month; return (kept, dropped).
+def drop_non_release_dates(
+    df: pd.DataFrame, non_release: tuple[tuple[str, str], ...]
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Remove FRED dates that are not scheduled prints; return (kept, dropped).
 
-    FRED's release/dates lists every day new data was published for a release,
-    including off-cycle revisions (e.g. CPI 2000-02-29 and 2000-09-28, payrolls
-    2024-01-10 and the 2024-08-21 preliminary benchmark revision -- confirmed against
-    the live API in 02-04). CPI and payrolls each have one scheduled print per month,
-    and the scheduled print always comes first, so later same-month dates are
-    revisions, not scheduled catalysts.
+    `non_release` is Settings.fred_non_release_dates: (release label, ISO date) pairs.
+    FRED's release/dates also lists revision and seasonal-factor publication days, and
+    no position rule (first or last in the month) separates them from the print, so
+    they are listed explicitly. validate_macro_calendar's one-per-month check catches
+    any new one.
     """
-    month = df["date"].dt.to_period("M")
-    first = df.groupby([df["release"], month])["date"].transform("min")
-    is_first = df["date"] == first
-    kept = df[is_first].reset_index(drop=True)
-    dropped = df[~is_first].reset_index(drop=True)
-    return kept, dropped
+    skip = {(label, pd.Timestamp(d)) for label, d in non_release}
+    is_skip = pd.Series(
+        [(r, d) in skip for r, d in zip(df["release"], df["date"], strict=True)],
+        index=df.index,
+        dtype=bool,
+    )
+    return df[~is_skip].reset_index(drop=True), df[is_skip].reset_index(drop=True)
 
 
 def merge_calendar(existing: pd.DataFrame | None, fresh: pd.DataFrame, today) -> pd.DataFrame:
@@ -276,6 +278,22 @@ def validate_macro_calendar(df: pd.DataFrame, settings: Settings, today) -> None
         raise ValueError(
             f"{int(out_of_range.sum())} row(s) outside "
             f"[{start_ts.date()}, {horizon_ts.date()}]"
+        )
+
+    fred_labels = [label for label, _rid, _name in settings.fred_releases]
+    fred = df[df["release"].isin(fred_labels)]
+    months = fred["date"].dt.strftime("%Y-%m")
+    per_month = fred.groupby([fred["release"], months])["date"].agg(list)
+    allowed = set(settings.fred_double_release_months)
+    extra = {
+        key: [str(d.date()) for d in dates]
+        for key, dates in per_month.items()
+        if len(dates) > 1 and key not in allowed
+    }
+    if extra:
+        raise ValueError(
+            f"more than one release in a month (add the non-print date to "
+            f"fred_non_release_dates after checking it): {extra}"
         )
 
     first_release_by = pd.Timestamp(settings.calendar_first_release_by)

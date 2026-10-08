@@ -8,6 +8,7 @@ file, exception message, or captured stderr (D-02).
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
@@ -153,25 +154,41 @@ def test_main_idempotent_second_run_same_fakes(tmp_path, monkeypatch):
     pd.testing.assert_frame_equal(first, second)
 
 
-def test_main_drops_same_month_fred_revision(tmp_path, monkeypatch, capsys):
-    """02-04 live run: FRED lists off-cycle revision dates (e.g. CPI 2000-02-29) that
-    pushed a year past 13 releases. The job keeps only the first date per month."""
+def test_main_unlisted_second_fred_date_in_month_fails_without_writing(
+    tmp_path, monkeypatch, capsys
+):
+    """02-04 live run: FRED also lists revision/seasonal-factor days. Known ones are in
+    Settings.fred_non_release_dates; an unlisted one must fail loudly, never be tagged
+    as a scheduled print."""
     calendar_path = tmp_path / "cal.parquet"
     fred_10 = json.loads((FIXTURES / "fred_release_dates_10.json").read_text())
     feb_1993 = [e["date"] for e in fred_10["release_dates"] if e["date"].startswith("1993-02")]
     assert len(feb_1993) == 1
-    revision = "1993-02-26"
-    assert revision > feb_1993[0]
-    fred_10["release_dates"].append({"release_id": 10, "date": revision})
+    fred_10["release_dates"].append({"release_id": 10, "date": "1993-02-26"})
     fred_10["count"] = len(fred_10["release_dates"])
 
     _install_fakes(monkeypatch, fred_10=fred_10)
-    assert build_macro_calendar.main(_argv(calendar_path)) == 0
+    assert build_macro_calendar.main(_argv(calendar_path)) == 1
+    assert not calendar_path.exists()
+    assert "more than one release in a month" in capsys.readouterr().err
 
+
+def test_main_drops_listed_non_print_dates(tmp_path, monkeypatch, capsys):
+    calendar_path = tmp_path / "cal.parquet"
+    fred_10 = json.loads((FIXTURES / "fred_release_dates_10.json").read_text())
+    fred_10["release_dates"].append({"release_id": 10, "date": "1993-02-26"})
+    fred_10["count"] = len(fred_10["release_dates"])
+    settings = replace(
+        build_macro_calendar.SETTINGS,
+        fred_non_release_dates=(("CPI", "1993-02-26"),),
+    )
+    monkeypatch.setattr(build_macro_calendar, "SETTINGS", settings)
+
+    _install_fakes(monkeypatch, fred_10=fred_10)
+    assert build_macro_calendar.main(_argv(calendar_path)) == 0
     cpi = load_macro_calendar(calendar_path).query("release == 'CPI'")
-    assert pd.Timestamp(revision) not in set(cpi["date"])
-    assert pd.Timestamp(feb_1993[0]) in set(cpi["date"])
-    assert f"CPI: dropped 1 off-cycle revision date(s): {revision}" in capsys.readouterr().out
+    assert pd.Timestamp("1993-02-26") not in set(cpi["date"])
+    assert "CPI: dropped 1 listed non-print date(s)" in capsys.readouterr().out
 
 
 def test_main_vanished_past_date_rejected_leaves_file_unchanged(tmp_path, monkeypatch, capsys):
