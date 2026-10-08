@@ -419,7 +419,7 @@ government data sources, not a fast-moving library API surface.
 | A4 | `federalreserve.gov/monetarypolicy/fomchistorical{YEAR}.htm` is a stable URL pattern across the full 1993–2020ish range (only 1993, 1994, 2015 directly verified this session) | Architecture Patterns, Common Pitfalls Pitfall 2, Don't Hand-Roll | If the Fed changes this URL scheme for some intermediate years, the scraper needs per-year fallback logic. Low risk (government archival pages are usually stable for decades) but not exhaustively checked year-by-year in this session. |
 | A5 | The exact cutover year between the historical per-year pages and the live `fomccalendars.htm` page (confirmed covering 2021–2027) is somewhere in 2019–2021 — not pinned down precisely | Architecture Patterns | If the builder assumes a wrong cutover year, it could either double-fetch a year or miss one entirely between the two source patterns. Cheap to fix at build time: dedupe by date after merging both sources. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does the project want full peak→recovery drawdown spans (the literal DET-03 wording) or
    steepest-leg spans for clustering/boundaries?**
@@ -432,6 +432,7 @@ government data sources, not a fast-moving library API surface.
    - Recommendation: adopt the steepest-leg interpretation (A2 above) unless a discuss-phase pass
      with the project owner says otherwise; it's directly supported by empirical counts matching
      DET-06's explicit numeric target.
+   - RESOLVED: steepest-leg spans adopted; see 02-CONTEXT.md D-01.
 
 2. **Does the macro calendar need to extend into the future, and if so how is it kept fresh?**
    - What we know: Phase 2 only needs 1993→today for the backfill (CAL-01's literal ask). Phase 4
@@ -445,6 +446,7 @@ government data sources, not a fast-moving library API surface.
    - Recommendation: build it idempotent/rerunnable now (cheap — it's the same fetch logic either
      way) even though Phase 2 only needs to run it once for the backfill; this avoids a Phase 4
      rewrite. Not load-bearing for Phase 2's own gate, but avoids rework.
+   - RESOLVED: idempotent, re-runnable builder; see 02-CONTEXT.md D-03.
 
 3. **FRED API key acquisition — who gets it, and does it need to be a GitHub Actions secret?**
    - What we know: the key is free and instant per FRED's own signup flow (not independently
@@ -458,6 +460,7 @@ government data sources, not a fast-moving library API surface.
    - Recommendation: default to local-only for the Phase 2 backfill (simplest, no secret
      management needed yet); only promote to a GH secret if/when Phase 4's nightly job needs to
      refresh the calendar unattended.
+   - RESOLVED: local-only key for Phase 2; see 02-CONTEXT.md D-02.
 
 ## Environment Availability
 
