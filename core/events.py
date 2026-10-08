@@ -7,6 +7,22 @@ argument -- no literals in function bodies that encode a detection rule. Trading
 distances use integer positions in the DatetimeIndex, never pd.Timedelta, so weekends and
 holidays never silently stretch a window (D-01, mirrors core/market_calendar.py's
 rationale).
+
+Replay stability (DET-05): every episode carries a "status" of "closed" or "open". A
+closed episode's fields (episode_id, start/end/anchor dates, trigger, triggers, search
+window, recovery_date, move_pct/max_z/severity) can never change when more rows are
+appended to `close`/`open_` -- see closure_frontier's docstring for the proof. An open
+episode's fields, including its episode_id, may still change as the episode grows;
+downstream consumers (Phase 3's paid news enrichment) must only enrich closed episodes.
+
+Known limitation (not fixed here, accepted per DET-05's contract): Yahoo re-adjusts
+adj_close on every dividend ex-date. Total-return ratios used for thresholds are
+scale-invariant under a uniform adjustment, but rounding in a re-downloaded adj_close
+could in principle flip a borderline threshold crossing right at the boundary of a
+closed window. The replay test proves stability under *append-only* data -- that is
+DET-05's contract, not immunity to upstream data revision (core/validate.py's D-13
+rewrite-tolerance gate already bounds how much adj_close itself is allowed to be
+rewritten).
 """
 from __future__ import annotations
 
@@ -31,6 +47,7 @@ EPISODE_COLUMNS = [
     "search_from",
     "search_to",
     "recovery_date",
+    "status",
     "detector_version",
 ]
 
@@ -182,6 +199,46 @@ def cluster_legs(legs: list[Leg], merge_window_days: int) -> list[list[Leg]]:
     return clusters
 
 
+def closure_frontier(close: pd.Series, settings: Settings) -> int:
+    """First integer position that future (not-yet-seen) rows could still touch (DET-05).
+
+    A cluster with ``end_pos + settings.merge_window_days < closure_frontier(...)`` can
+    never be changed by appending more rows to `close`, and is therefore safe to mark
+    "closed". Proof, by the three ways a future row could reach back into an existing
+    cluster:
+
+    (a) A future shock/gap leg is a single day at the first not-yet-seen position,
+        ``len(close)``. It can only start there or later.
+    (b) A future rally leg flagged at some future position looks back at most
+        ``settings.rally_window_days`` bars for its trough (see rally_legs), so the
+        earliest position any future rally's (start_pos, end_pos) interval can touch is
+        ``len(close) - settings.rally_window_days``.
+    (c) A future drawdown leg can only start at a peak position. If the last observed
+        close is below the series' own running all-time peak (by any depth -- a shallow
+        dip may deepen into a qualifying leg later), that peak's position is still a live
+        candidate for a future drawdown leg's start_pos, so it is also a lower bound on
+        what future data can touch.
+
+    `closure_frontier` is the minimum of (a), (b) and whichever of (c) applies. Positions
+    at or after it may still be absorbed into a cluster that currently ends before it,
+    because cluster_legs' sweep-merge only ever extends a cluster's end forward and never
+    reaches backward across a gap wider than merge_window_days. Everything used to compute
+    a closed cluster's anchor_date, move_pct, max_z, severity and search window is drawn
+    only from positions inside [start_pos, end_pos] -- strictly inside the closed window --
+    and shock_zscores' rolling sigma is itself causal (lagged one day), so it never reaches
+    into future rows either. A closed cluster's fields are therefore a pure function of data
+    already fixed at closure time.
+    """
+    n = len(close)
+    candidates = [n, n - settings.rally_window_days]
+    values = close.to_numpy(dtype=float)
+    running_peak = np.maximum.accumulate(values)
+    if values[-1] < running_peak[-1]:
+        at_peak = np.nonzero(values == running_peak)[0]
+        candidates.append(int(at_peak[-1]))
+    return min(candidates)
+
+
 def detect(prices: pd.DataFrame, settings: Settings) -> pd.DataFrame:
     """Detect and cluster shock/gap/drawdown/rally primitives into episodes (DET-01..07).
 
@@ -207,6 +264,8 @@ def detect(prices: pd.DataFrame, settings: Settings) -> pd.DataFrame:
         legs.append(Leg("gap", pos, pos, float(ret.loc[date]), None))
     legs.extend(drawdown_legs(close, settings.drawdown_threshold))
     legs.extend(rally_legs(close, settings.rally_threshold, settings.rally_window_days))
+
+    frontier = closure_frontier(close, settings)
 
     rows: list[dict] = []
     seen_ids: set[str] = set()
@@ -259,13 +318,18 @@ def detect(prices: pd.DataFrame, settings: Settings) -> pd.DataFrame:
         search_to_pos = min(max(search_to_pos, 0), n - 1)
 
         drawdown_in_cluster = [leg for leg in cluster if leg.kind == "drawdown"]
-        if not drawdown_in_cluster or any(
-            leg.recovery_pos is None for leg in drawdown_in_cluster
-        ):
+        drawdown_recovered = all(leg.recovery_pos is not None for leg in drawdown_in_cluster)
+        if not drawdown_in_cluster or not drawdown_recovered:
             recovery_date = pd.NaT
         else:
             recovery_pos = max(leg.recovery_pos for leg in drawdown_in_cluster)
             recovery_date = index[recovery_pos]
+
+        status = (
+            "closed"
+            if end_pos + settings.merge_window_days < frontier and drawdown_recovered
+            else "open"
+        )
 
         episode_id = f"{anchor_date:%Y-%m-%d}_{trigger}"
         if episode_id in seen_ids:
@@ -287,6 +351,7 @@ def detect(prices: pd.DataFrame, settings: Settings) -> pd.DataFrame:
                 "search_from": index[search_from_pos],
                 "search_to": index[search_to_pos],
                 "recovery_date": recovery_date,
+                "status": status,
                 "detector_version": settings.detector_version,
             }
         )
