@@ -88,7 +88,9 @@ def main(argv: list[str] | None = None) -> int:
         for year in range(pd.Timestamp(SETTINGS.calendar_start).year, last_historical_year + 1):
             url = SETTINGS.fomc_historical_url_template.format(year=year)
             html = retryer(fetch_text, url, SETTINGS.http_timeout_s)
-            historical_frames.append(parse_fomc_historical(html, year, url))
+            historical_frames.append(
+                parse_fomc_historical(html, year, url, SETTINGS.fomc_non_decision_meetings)
+            )
 
         fred_frames = []
         for label, release_id, expected_name in SETTINGS.fred_releases:

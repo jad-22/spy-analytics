@@ -32,10 +32,15 @@ _HISTORICAL_ENTRY_RE = re.compile(
 _YEAR_SECTION_RE = re.compile(r"(?P<year>\d{4})\s+FOMC Meetings")
 
 # "January 26-27 Statement", "March 16-17* Statement", "Jan/Feb 31-1 Statement",
-# "August 22 (notation vote) Statement"
+# "August 22 (notation vote) Statement". Future meetings have no Statement link yet
+# ("October 27-28 December 8-9* * Meeting associated..."), so an entry may instead be
+# followed by the next entry, the footnote asterisk or the end of its year section.
+# Prose dates ("Released February 18, 2026", "January 25-26, 2028") are followed by a
+# comma and never match.
 _CALENDAR_ENTRY_RE = re.compile(
     r"(?:(?P<mon1>[A-Za-z]{3,9})/)?(?P<mon2>[A-Za-z]{3,9})\s+(?P<day1>\d{1,2})"
-    r"(?:-(?P<day2>\d{1,2}))?\*?\s*(?:\((?P<note>[a-z ]+)\))?\s*Statement"
+    r"(?:-(?P<day2>\d{1,2}))?\*?\s*(?:\((?P<note>[a-z ]+)\))?"
+    r"(?=\s*(?:Statement|\*|[A-Z][a-z]+(?:/[A-Z][a-z]+)?\s+\d{1,2}(?:-\d{1,2})?\*?(?:\s|$)|$))"
 )
 
 
@@ -65,16 +70,20 @@ def _frame(rows: list[dict]) -> pd.DataFrame:
     return df.sort_values(["date", "release", "release_type"]).reset_index(drop=True)
 
 
-def parse_fomc_historical(html: str, year: int, url: str) -> pd.DataFrame:
+def parse_fomc_historical(
+    html: str, year: int, url: str, non_decision: tuple[str, ...] = ()
+) -> pd.DataFrame:
     """Scheduled/unscheduled FOMC decision dates from one federalreserve.gov per-year page.
 
     Header classification: "Conference Call" or an "(unscheduled)" annotation ->
     release_type "unscheduled", scheduled False. A plain "Meeting" header -> "meeting",
     scheduled True. A "(cancelled)" meeting is dropped entirely -- no decision was made
     on that date (RESEARCH Pitfall 2; the cancelled slot is replaced by the emergency
-    unscheduled meetings that appear as their own rows).
+    unscheduled meetings that appear as their own rows). Dates in `non_decision`
+    (Settings.fomc_non_decision_meetings) are dropped for the same reason.
     """
     text = _strip_html(html)
+    skip = {pd.Timestamp(d) for d in non_decision}
     rows: list[dict] = []
     for m in _HISTORICAL_ENTRY_RE.finditer(text):
         if int(m.group("year")) != year:
@@ -85,6 +94,8 @@ def parse_fomc_historical(html: str, year: int, url: str) -> pd.DataFrame:
         day = int(m.group("day2") or m.group("day1"))
         month = _parse_month(m.group("mon"))
         date = pd.Timestamp(year=year, month=month, day=day)
+        if date in skip:
+            continue
         kind = m.group("kind")
         if kind == "Conference Call" or note == "unscheduled":
             release_type, scheduled = "unscheduled", False

@@ -96,6 +96,10 @@ class Settings:
     fomc_calendars_url: str = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
     http_timeout_s: float = 20.0
     fomc_scheduled_per_year: tuple[int, int] = (7, 8)  # 2020 swapped a meeting for emergency ones
+    # Historical-page "Meeting" entries that made no policy decision. 2003-09-15 is listed
+    # the day before the regular 2003-09-16 meeting with an agenda, minutes and transcript
+    # but no policy statement (every 2003 decision had one) -- found in the 02-04 live run.
+    fomc_non_decision_meetings: tuple[str, ...] = ("2003-09-15",)
     monthly_releases_per_year: tuple[int, int] = (10, 13)  # shutdown years can delay/cancel one
     calendar_horizon_days: int = 800  # max days past today a scheduled date may sit
 

@@ -82,6 +82,22 @@ def test_parse_fomc_historical_2015_all_scheduled():
     assert (df["release_type"] == "meeting").all()
 
 
+def test_parse_fomc_historical_2003_drops_non_decision_meeting():
+    """02-04 live run: the 2003 page lists a "September 15 Meeting" with no policy
+    statement the day before the real 2003-09-16 decision, giving 9 scheduled rows."""
+    html = _read("fomchistorical2003.htm")
+    assert "September 15 Meeting" in html.replace("\n", " ") or "September 15" in html
+    raw = parse_fomc_historical(html, 2003, "u")
+    assert pd.Timestamp("2003-09-15") in set(raw["date"])
+
+    df = parse_fomc_historical(html, 2003, "u", SETTINGS.fomc_non_decision_meetings)
+    assert pd.Timestamp("2003-09-15") not in set(df["date"])
+    assert pd.Timestamp("2003-09-16") in set(df[df["scheduled"]]["date"])
+    assert int(df["scheduled"].sum()) == 8
+    # The four Iraq-war conference calls stay as unscheduled rows.
+    assert int((~df["scheduled"]).sum()) == 4
+
+
 def test_parse_fomc_historical_raises_on_zero_rows():
     with pytest.raises(ValueError):
         parse_fomc_historical("<html>nothing here</html>", 1993, "u")
@@ -101,6 +117,21 @@ def test_parse_fomc_calendars_covers_every_listed_year():
     years = set(df["date"].dt.year)
     # Confirmed live this session: current page covers 2021-2027 section headers.
     assert {2021, 2022, 2023, 2024, 2025}.issubset(years)
+
+
+def test_parse_fomc_calendars_includes_future_meetings_without_statements():
+    """02-04 live run: meetings with no Statement link yet were silently dropped, losing
+    2026-10-28, 2026-12-09 and all of 2027 from the forward calendar."""
+    df = parse_fomc_calendars(_read("fomccalendars.htm"), "u")
+    dates = set(df["date"].dt.strftime("%Y-%m-%d"))
+    assert {"2026-10-28", "2026-12-09"} <= dates
+    per_year = df[df["scheduled"]].groupby(df["date"].dt.year).size().to_dict()
+    assert per_year == {y: 8 for y in range(2021, 2028)}
+    # "A two-day meeting is scheduled for January 25-26, 2028" is prose, not an entry.
+    # It sits inside the 2027 section, so a false match would appear as 2027-01-26.
+    assert "2027-01-26" not in dates
+    # "(Released February 18, 2026)" minutes dates are prose, not entries.
+    assert "2026-02-18" not in dates
 
 
 def test_parse_fomc_calendars_raises_on_zero_rows():
