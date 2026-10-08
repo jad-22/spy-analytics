@@ -8,8 +8,8 @@ import pandas as pd
 
 from core.backtest import BacktestResult, run_backtest
 from core.indicators import MASpec
-from core.metrics import summarise
-from core.signals import MACrossoverStrategy, Strategy
+from core.metrics import summarise, total_return
+from core.signals import MACrossoverStrategy, Strategy, combine_all, crossover_target, trend_filter
 
 _INSUFFICIENT_HISTORY = "Not enough price history for these rules in the selected window"
 _SPLIT_OUTSIDE_WINDOW = "Split date must fall inside the backtest window"
@@ -133,25 +133,63 @@ def heatmap_grid(prices: pd.DataFrame, short_kind: str, long_kind: str,
                  cost_bps: float = 0.0, start=None, end=None,
                  trend_filter_period: int | None = None) -> HeatmapResult:
     """Excess-return-vs-B&H heatmap for one SMA/EMA type pair (D-06, D-07), sharing the
-    sidebar's cost/basis/filter settings (D-10) via run_ma_grid/grid_window."""
+    sidebar's cost/basis/filter settings (D-10).
+
+    D-09 profiling (scripts/profile_lab_grid.py) showed the naive per-pair approach (build
+    a MACrossoverStrategy per pair, let each recompute its own short/long MAs via
+    run_ma_grid -> run_strategy_grid -> grid_window, each walking the full pairs list once)
+    took ~2.2s for the ~192-cell grid alone, over SETTINGS.grid_debounce_threshold_s. Each
+    of the 12 distinct short periods and 16 distinct long periods was being recomputed up to
+    16x/12x redundantly. This computes each distinct MA exactly once and reuses it across
+    every pair that needs it — same math as run_ma_grid/MACrossoverStrategy, no numeric
+    change, just no redundant work.
+    """
     pairs = heatmap_pairs(short_kind, long_kind, short_range, long_range)
-    strategies = [MACrossoverStrategy(s, lg, trend_filter_period) for s, lg in pairs]
-    win_start, win_end = grid_window(prices, strategies, start=start, end=end)
-    grid = run_ma_grid(prices, pairs, cost_bps=cost_bps, start=start, end=end,
-                       trend_filter_period=trend_filter_period)
-    rows = [
-        {"short": s.period, "long": lg.period,
-         "excess": grid.loc[MACrossoverStrategy(s, lg, trend_filter_period).name,
-                             "excess_total_return"]}
-        for s, lg in pairs
-    ]
+    if end is not None:
+        prices = prices.loc[:end]
+    close = prices["close"]
+
+    short_mas = {p: MASpec(short_kind, p).compute(close) for p in {s.period for s, _ in pairs}}
+    long_mas = {p: MASpec(long_kind, p).compute(close) for p in {lg.period for _, lg in pairs}}
+    trend = trend_filter(close, trend_filter_period) if trend_filter_period else None
+
+    targets: dict[str, pd.Series] = {}
+    for s, lg in pairs:
+        name = MACrossoverStrategy(s, lg, trend_filter_period).name
+        base = crossover_target(short_mas[s.period], long_mas[lg.period])
+        targets[name] = combine_all(base, trend).rename(name) if trend is not None else \
+            base.rename(name)
+
+    first_valids = [t.first_valid_index() for t in targets.values()]
+    if any(fv is None for fv in first_valids):
+        raise ValueError(_INSUFFICIENT_HISTORY)
+    last_first_valid = max(first_valids)
+    pos = prices.index.get_loc(last_first_valid) + 1
+    if pos >= len(prices.index):
+        raise ValueError(_INSUFFICIENT_HISTORY)
+    common_start = prices.index[pos]
+    if start is not None:
+        common_start = max(common_start, pd.Timestamp(start))
+    if common_start > prices.index[-1]:
+        raise ValueError(_INSUFFICIENT_HISTORY)
+
+    rows = []
+    for s, lg in pairs:
+        name = MACrossoverStrategy(s, lg, trend_filter_period).name
+        res = run_backtest(prices, targets[name], cost_bps=cost_bps, start=common_start, end=end)
+        # Only excess_total_return is needed for the heatmap (unlike run_strategy_grid's
+        # full metrics table) — summarise() additionally computes sharpe/sortino/calmar/
+        # downside_deviation per cell, which is wasted work at ~190 cells. Same numeric
+        # definition as summarise()'s excess_total_return: total_return(equity) diff.
+        excess_value = total_return(res.equity) - total_return(res.benchmark)
+        rows.append({"short": s.period, "long": lg.period, "excess": excess_value})
     excess = (
         pd.DataFrame(rows)
         .pivot(index="short", columns="long", values="excess")
         .sort_index(axis=0)
         .sort_index(axis=1)
     )
-    return HeatmapResult(excess=excess, start=win_start, end=win_end)
+    return HeatmapResult(excess=excess, start=common_start, end=prices.index[-1])
 
 
 def rolling_start_strategy(prices: pd.DataFrame, strategy: Strategy, horizon_years: int = 5,

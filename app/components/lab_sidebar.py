@@ -91,3 +91,19 @@ def rule_input(settings: LabSettings) -> Strategy:
     return MACrossoverStrategy(
         MASpec(short_kind, short_period), MASpec(long_kind, long_period), trend_filter_period
     )
+
+
+def split_input(settings: LabSettings, last_date: pd.Timestamp) -> pd.Timestamp:
+    """Render the IS/OOS split date (LAB-07, D-12), bounded so in-sample is at least
+    split_min_years after the sidebar start and out-of-sample is at least
+    split_min_oos_months before the latest committed data (not the sidebar end — D-12's
+    out-of-sample window always runs to the latest data)."""
+    min_date = settings.start + pd.DateOffset(years=SETTINGS.split_min_years)
+    max_date = last_date - pd.DateOffset(months=SETTINGS.split_min_oos_months)
+    min_date = min(min_date, max_date)
+    default = min(max(pd.Timestamp(SETTINGS.default_split), min_date), max_date)
+    value = st.sidebar.date_input(
+        "Split date", value=default.date(), min_value=min_date.date(),
+        max_value=max_date.date(), key="lab_split",
+    )
+    return pd.Timestamp(value)

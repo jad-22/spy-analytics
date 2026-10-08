@@ -11,7 +11,7 @@ import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from app.components.lab_charts import heatmap_figure, rolling_figure, scatter_figure
-from app.components.lab_compute import heatmap_for, headline_grid
+from app.components.lab_compute import headline_grid, heatmap_for
 from core.config import SETTINGS
 from core.grid import HeatmapResult, rolling_start_strategy
 from core.indicators import MASpec
