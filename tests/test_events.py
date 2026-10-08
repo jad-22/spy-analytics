@@ -5,7 +5,9 @@ core/events.py -- per CLAUDE.md and DET-06, thresholds must flow from config.
 """
 from __future__ import annotations
 
+import ast
 import dataclasses
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -23,6 +25,9 @@ from core.events import (
     shock_days,
     shock_zscores,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
+EVENTS_MODULE_PATH = ROOT / "core" / "events.py"
 
 
 def _settings_with(**overrides):
@@ -228,3 +233,46 @@ def test_detect_respects_custom_shock_threshold_from_settings(random_prices):
     default_shock_count = default_episodes["triggers"].str.contains("shock").sum()
     strict_shock_count = strict_episodes["triggers"].str.contains("shock").sum()
     assert strict_shock_count < default_shock_count
+
+
+def test_events_module_has_no_numeric_literals():
+    """DET-06: every detection threshold must flow from Settings, not a bare literal.
+
+    Only 0 and 1 are allowed (array/position bookkeeping -- e.g. close.iloc[0],
+    max(x - 1, 0), 0.0 as a "no data" severity default) since those aren't thresholds.
+    """
+    tree = ast.parse(EVENTS_MODULE_PATH.read_text())
+    bad_lines = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            if isinstance(node.value, bool):
+                continue
+            if node.value not in (0, 1):
+                bad_lines.append(node.lineno)
+    assert not bad_lines, (
+        f"core/events.py has non-0/1 numeric literals (should flow from Settings) at "
+        f"line(s): {sorted(set(bad_lines))}"
+    )
+
+
+def test_events_module_is_pure():
+    """core/events.py must stay a pure transform: no network, no core.data/core.storage,
+    no jobs/scripts -- same forbidden-module boundary as tests/test_app_purity.py.
+    """
+    forbidden = {
+        "requests", "urllib", "httpx", "socket", "yfinance", "anthropic", "streamlit",
+        "core.data", "core.storage", "jobs", "scripts",
+    }
+    tree = ast.parse(EVENTS_MODULE_PATH.read_text())
+    imported: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module)
+
+    for module in imported:
+        is_forbidden = any(
+            module == bad or module.startswith(f"{bad}.") for bad in forbidden
+        )
+        assert not is_forbidden, f"core/events.py imports forbidden module '{module}'"
