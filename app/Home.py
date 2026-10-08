@@ -26,6 +26,12 @@ pg = st.navigation(
             url_path="overview",
             default=True,
         ),
+        st.Page(
+            "views/strategy_lab.py",
+            title="Strategy Lab",
+            icon=":material/science:",
+            url_path="strategy-lab",
+        ),
     ]
 )
 pg.run()
