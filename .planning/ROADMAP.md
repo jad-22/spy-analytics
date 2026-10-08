@@ -43,7 +43,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. New strategy rule types can be added through a `Strategy` interface without changing the Strategy Lab page.
 
 **Plans:** 6/6 plans complete
-Plans:
+
+Plans:
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Walking skeleton: cached storage module, st.navigation app, Overview price line, refresh job with 1993 backfill + meta.json (wave 1)
@@ -78,7 +79,24 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. All detection thresholds live in config (not hard-coded), and the 1993+ backfill produces an episode count in the low hundreds.
   5. `data/macro_calendar.parquet` lists FOMC decision, CPI and payrolls release dates from 1993 with a source URL each, and every detected episode is tagged with any such release inside its window (scheduled vs surprise).
 
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Detection slice: core/events.py (shock/gap/drawdown/rally, D-01 steepest-leg clustering), jobs/detect_events.py, committed episodes.parquet, DET-06 count + DET-07 known-episode tests (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Replay stability: closed/open status via closure frontier, real-data replay test at six cutoffs, no-literal/purity guards (wave 2)
+- [ ] 02-03-PLAN.md — Macro calendar builder offline: Fed/FRED fetchers in core/data.py, pure parsers in core/calendar.py, idempotent job (D-03), key hygiene (D-02), real-page fixtures (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-04-PLAN.md — Live local calendar build with Jason's FRED key (checkpoint), A1 release-id confirmation, committed macro_calendar.parquet + CI data test (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-05-PLAN.md — CAL-02 tagging (scheduled vs surprise) wired into detect job, final episodes.parquet, script-generated docs/PHASE2_CALIBRATION.md (wave 4)
 
 ### Phase 3: News Enrichment, Backfill & Review
 
@@ -122,6 +140,6 @@ Phase 2 complete. Phase 4 requires Phases 1, 2 and 3 complete.
 |-------|----------------|--------|-----------|
 | 0. Core engine rebuild | - | Complete | 2026-10-07 |
 | 1. Foundation, Overview & Strategy Lab | 6/6 | Complete   | 2026-10-08 |
-| 2. Event Detection & Macro Calendar | 0/TBD | Not started | - |
+| 2. Event Detection & Macro Calendar | 0/5 | Planned | - |
 | 3. News Enrichment, Backfill & Review | 0/TBD | Not started | - |
 | 4. Event Explorer, Event Study, Methodology & Nightly Automation | 0/TBD | Not started | - |
