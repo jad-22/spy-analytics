@@ -21,7 +21,7 @@ every weekday night.
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation, Overview & Strategy Lab** - Deployed public app with price-only Overview and Strategy Lab pages, reading only committed data
+- [x] **Phase 1: Foundation, Overview & Strategy Lab** - Deployed public app with price-only Overview and Strategy Lab pages, reading only committed data (completed 2026-10-08)
 - [ ] **Phase 2: Event Detection & Macro Calendar** - Deterministic, replay-stable episode detection and a sourced US macro calendar (runs in parallel with Phase 1)
 - [ ] **Phase 3: News Enrichment, Backfill & Review** - Sourced, validated LLM explanations for every episode since 1993, within budget, with manual review and overrides
 - [ ] **Phase 4: Event Explorer, Event Study, Methodology & Nightly Automation** - Full event UI, aggregate event-study stats, methodology page, and unattended nightly pipeline
@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A nightly GitHub Actions job refreshes `data/prices.parquet` and `data/meta.json` (validated, with retries and no silent gap/shrink), commits without triggering a CI loop, and every app page reads through one cached storage module with zero network calls.
   5. New strategy rule types can be added through a `Strategy` interface without changing the Strategy Lab page.
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 Plans:
 **Wave 1**
 
@@ -60,7 +60,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-06-PLAN.md — Ship: docs, public repo + Streamlit Cloud deploy (checkpoint), live nightly/CI-loop verification (wave 4)
+- [x] 01-06-PLAN.md — Ship: docs, public repo + Streamlit Cloud deploy (checkpoint), live nightly/CI-loop verification (wave 4)
 
 **UI hint**: yes
 
@@ -121,7 +121,7 @@ Phase 2 complete. Phase 4 requires Phases 1, 2 and 3 complete.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Core engine rebuild | - | Complete | 2026-10-07 |
-| 1. Foundation, Overview & Strategy Lab | 5/6 | In Progress|  |
+| 1. Foundation, Overview & Strategy Lab | 6/6 | Complete   | 2026-10-08 |
 | 2. Event Detection & Macro Calendar | 0/TBD | Not started | - |
 | 3. News Enrichment, Backfill & Review | 0/TBD | Not started | - |
 | 4. Event Explorer, Event Study, Methodology & Nightly Automation | 0/TBD | Not started | - |

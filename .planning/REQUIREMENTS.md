@@ -90,7 +90,7 @@
 
 ### Operations
 
-- [ ] **OPS-01**: The app is deployed on Streamlit Community Cloud from a public GitHub repo, with its URL in the README
+- [x] **OPS-01**: The app is deployed on Streamlit Community Cloud from a public GitHub repo, with its URL in the README
 - [ ] **OPS-02**: A nightly GitHub Actions job (weekday evenings UK time) refreshes prices, detects episodes, enriches new ones and commits `data/`
 - [ ] **OPS-03**: The Anthropic API key exists only as a GitHub Actions secret
 - [ ] **OPS-04**: Nightly failures are visible (failed run, notification), and the job keeps the workflow from going stale under the 60-day inactivity rule
@@ -144,7 +144,7 @@
 | LAB-08 | Phase 1 | Complete |
 | LAB-09 | Phase 1 | Complete |
 | LAB-10 | Phase 1 | Complete |
-| OPS-01 | Phase 1 | Pending |
+| OPS-01 | Phase 1 | Complete |
 | OPS-05 | Phase 1 | Complete |
 | DET-01 | Phase 2 | Pending |
 | DET-02 | Phase 2 | Pending |

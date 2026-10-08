@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-10-08T02:11:24.393Z"
+status: verifying
+last_updated: "2026-10-08T10:17:24.890Z"
 last_activity: 2026-10-08
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
-  percent: 0
+  completed_plans: 6
+  percent: 25
 ---
 
 # Project State
@@ -28,10 +28,10 @@ look-ahead, total-return prices and costs, event explanations cite in-window sou
 
 Phase: 01 (foundation-overview-strategy-lab) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-08
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [████████░░] 83%
 *Updated after each plan completion*
 | Phase 01 P01 | 14min | 4 tasks | 22 files |
 | Phase 01 P05 | 17m | 2 tasks | 9 files |
+| Phase 01 P06 | 20min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,7 @@ Recent decisions affecting current work:
 - [Phase 01]: Phase 1 Plan 01: tenacity.Retrying used as a callable (not @retry decorator) so fetch_with_retry calls the bare module-level fetch_yfinance name, letting tests monkeypatch it directly
 - [Phase 01]: Phase 1 Plan 01: app/components/store.py functions read SETTINGS as a module-level global at call time (not a bound default), so tests can monkeypatch store.SETTINGS to point at a missing snapshot for the empty-state test
 - [Phase 01]: D-09 resolved by measurement: naive heatmap_grid was 2.70s cold-sum (DEBOUNCE NEEDED); two numerically-neutral vectorisations (shared per-period MA computation, skipping unused summarise() ratios) brought it to 1.49s against the 2.0s threshold -- REACTIVE OK, no st.form debounce added
+- [Phase 01]: Phase 1 (01-06): left core/config.py rewrite_tolerance_pct and core/validate.py unchanged after the live GitHub Actions nightly run reproduced the same D-13 volume-only rejection seen in 01-02's local repro (Yahoo revises most-recent-day volume post-close) -- tolerance change is a user decision, not an auto-fix
 
 ### Pending Todos
 
@@ -78,7 +80,7 @@ None yet.
 - Phase 3: Model ID (`claude-haiku-5-5` in research STACK.md) and its pricing are unverified against official Anthropic docs — must confirm before scoping or running the backfill (see ROADMAP.md Phase 3, Success Criterion 1).
 - Phase 1: Stooq fallback is confirmed broken (CAPTCHA-gated endpoint) — nightly price job should rely on yfinance + retries + last-good-snapshot, not a second scraped fallback.
 - Phase 1: Verify `st.plotly_chart(on_select="rerun")` actually fires on the Strategy Lab heatmap (documented Streamlit gaps exist for imshow/heatmap selection); have a table-row fallback ready.
-- Nightly D-13 gate rejected a local refresh: Yahoo revised 2026-10-07 volume by ~0.69% (OHLC exact). Decide volume tolerance before relying on nightly.yml (see 01-02-SUMMARY).
+- Nightly D-13 gate rejects on live GitHub Actions too (run 37761824923, not just the 01-02 local repro): Yahoo revised 2026-10-07 volume by ~0.69% (OHLC exact), job exits 1 with no commit. Decide volume tolerance before relying on nightly.yml for unattended refreshes (see 01-02-SUMMARY, 01-06-SUMMARY).
 
 ## Deferred Items
 
@@ -90,6 +92,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-08T02:11:24.378Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-10-08T10:17:24.879Z
+Stopped at: Completed 01-06-PLAN.md (Phase 1 shipped: public repo, Streamlit Cloud deploy, live nightly verified -- D-13 volume-tolerance decision still open)
 Resume file: None
