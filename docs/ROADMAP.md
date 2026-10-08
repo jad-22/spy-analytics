@@ -55,13 +55,16 @@ reproduces the `PHASE0_FINDINGS.md` numbers for the same inputs (covered by a te
 
 ## Phase 2: Event detection
 
-1. `core/events.py`: shock day (|log r| > 2.5 × lagged 60D σ), gap open (> 1.5%), drawdown
-   episode (≥ 5%, ends at new high), rally episode (≥ 8% in 30 days); clustering within 3
-   days; `anchor_date`; severity score; search windows. All thresholds in `config.py`.
-2. `core/calendar.py` + `data/macro_calendar.parquet`: FOMC, CPI, payrolls since history start.
-3. `jobs/detect_events.py` → `data/episodes.parquet` with `detector_version`.
-4. Calibrate thresholds so the backfill is in the low hundreds of episodes; record in
-   Methodology.
+1. [x] `core/events.py`: shock day (|log r| > 2.5 × lagged 60D σ), gap open (> 1.5%),
+   drawdown episode (≥ 5%, steepest leg), rally episode (≥ 8% in 30 days); clustering
+   within 3 days; `anchor_date`; severity score; search windows. All thresholds in
+   `config.py`.
+2. [x] `core/calendar.py` + `data/macro_calendar.parquet`: FOMC, CPI, payrolls since
+   history start.
+3. [x] `jobs/detect_events.py` → `data/episodes.parquet` with `detector_version`, tagged
+   scheduled vs surprise against the macro calendar (CAL-02).
+4. [x] Calibrate thresholds so the backfill is in the low hundreds of episodes; recorded
+   in `docs/PHASE2_CALIBRATION.md` (script-generated; Methodology page in Phase 4).
 
 **Gate:** the episode count is in the target range, and known events (Aug 2015, Feb 2018,
 Q4 2018, Mar 2020, 2022 bear) are all detected. A test asserts this.
@@ -101,6 +104,7 @@ for accessibility and copy.
       it changes episode count and backfill cost. It also changes the Phase 1 default range.
       Resolved: app history starts 1993-01-29 (DATA-01); Phase 0 findings stay on the
       notebook's 2010 window.
-- [ ] Macro calendar: US-only, or add BoE/ECB? **Before Phase 2.**
+- [x] Macro calendar: US-only, or add BoE/ECB? **Before Phase 2.**
+      Resolved: US-only (FOMC, CPI, payrolls) per CAL-01.
 - [x] Public or private GitHub repo? **Before Phase 1 deploy.** Streamlit Community Cloud works
       with both. Resolved: public (OPS-01) — https://github.com/jad-22/spy-analytics.

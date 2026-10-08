@@ -15,16 +15,7 @@ from core.config import SETTINGS
 from core.events import EPISODE_COLUMNS
 from core.storage import load_episodes, load_meta
 from jobs import detect_events
-
-KNOWN_EPISODES = {
-    "2000-02": "2002-07-23",
-    "2008": "2008-10-09",
-    "Aug 2015": "2015-08-24",
-    "Feb 2018": "2018-02-05",
-    "Q4 2018": "2018-12-24",
-    "Mar 2020": "2020-03-16",
-    "2022": "2022-06-13",
-}
+from scripts.report_phase2 import KNOWN_EPISODES
 
 
 @pytest.fixture(scope="module")
