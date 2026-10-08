@@ -38,6 +38,18 @@ def write_episodes(df: pd.DataFrame, path: Path) -> None:
     df.to_parquet(path, index=False)
 
 
+def load_macro_calendar(path: Path) -> pd.DataFrame:
+    """Read the committed macro calendar. Lets FileNotFoundError propagate."""
+    return pd.read_parquet(path)
+
+
+def write_macro_calendar(df: pd.DataFrame, path: Path) -> None:
+    """Write the macro calendar. Single call site: jobs/build_macro_calendar.py."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(path, index=False)
+
+
 def price_basis(raw: pd.DataFrame, basis: str) -> pd.DataFrame:
     """Return prices on the requested basis: total_return (dividends reinvested) or price_only."""
     if basis == "total_return":

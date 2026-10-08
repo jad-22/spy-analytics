@@ -79,5 +79,25 @@ class Settings:
     )  # which kind names a multi-trigger cluster (D-01/Pitfall 4)
     episode_count_bounds: tuple[int, int] = (100, 300)  # DET-06: 1993+ backfill, "low hundreds"
 
+    # Macro calendar (CAL-01..02)
+    macro_calendar_path: Path = field(default=DATA_DIR / "macro_calendar.parquet")
+    calendar_start: str = "1993-01-01"
+    calendar_first_release_by: str = "1993-02-28"  # each FRED release's 1st date must be <= this
+    fred_api_url: str = "https://api.stlouisfed.org/fred"
+    fred_api_key_env: str = "FRED_API_KEY"  # D-02: local env only, never a CLI arg
+    fred_releases: tuple[tuple[str, int, str], ...] = (
+        ("CPI", 10, "Consumer Price Index"),
+        ("payrolls", 50, "Employment Situation"),
+    )  # (release label, FRED release_id, expected name substring -- RESEARCH A1 confirmed live)
+    fred_source_url_template: str = "https://alfred.stlouisfed.org/releases/calendar?rid={rid}&y={year}"
+    fomc_historical_url_template: str = (
+        "https://www.federalreserve.gov/monetarypolicy/fomchistorical{year}.htm"
+    )
+    fomc_calendars_url: str = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+    http_timeout_s: float = 20.0
+    fomc_scheduled_per_year: tuple[int, int] = (7, 8)  # 2020 swapped a meeting for emergency ones
+    monthly_releases_per_year: tuple[int, int] = (10, 13)  # shutdown years can delay/cancel one
+    calendar_horizon_days: int = 800  # max days past today a scheduled date may sit
+
 
 SETTINGS = Settings()

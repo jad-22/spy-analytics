@@ -10,9 +10,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pandas as pd
-import pytest
-
 from core.storage import load_macro_calendar
 from jobs import build_macro_calendar
 

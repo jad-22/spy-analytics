@@ -1,0 +1,278 @@
+"""Macro-release calendar: FOMC/CPI/payrolls parsing, merge and validation (CAL-01).
+
+Pure: no network call, no Streamlit import, must not import core.data or core.storage.
+This is the macro-*release* calendar (FOMC decisions, CPI, payrolls) -- a different
+concept from core/market_calendar.py's NYSE trading-session calendar; keep the two
+separate.
+
+HTML is parsed with stdlib `re` + `html.unescape` only (no new dependency, no
+pandas.read_html). jobs/build_macro_calendar.py owns all network I/O and calls these
+functions with already-fetched text/JSON.
+"""
+from __future__ import annotations
+
+import calendar as _calendar_module
+import html as html_lib
+import re
+
+import pandas as pd
+
+from core.config import Settings
+
+CALENDAR_COLUMNS = ["date", "release", "release_type", "scheduled", "source_url"]
+
+# "January 6 Conference Call - 1993", "February 2-3 Meeting - 1993",
+# "March 2 (unscheduled) Meeting - 2020", "March 17-18 (cancelled) Meeting - 2020"
+_HISTORICAL_ENTRY_RE = re.compile(
+    r"(?P<mon>[A-Za-z]+)\s+(?P<day1>\d{1,2})(?:-(?P<day2>\d{1,2}))?"
+    r"(?:\s*\((?P<note>[a-z]+)\))?\s*(?P<kind>Conference Call|Meeting)\s*-\s*(?P<year>\d{4})"
+)
+
+# "2021 FOMC Meetings" section headers on the current calendars page.
+_YEAR_SECTION_RE = re.compile(r"(?P<year>\d{4})\s+FOMC Meetings")
+
+# "January 26-27 Statement", "March 16-17* Statement", "Jan/Feb 31-1 Statement",
+# "August 22 (notation vote) Statement"
+_CALENDAR_ENTRY_RE = re.compile(
+    r"(?:(?P<mon1>[A-Za-z]{3,9})/)?(?P<mon2>[A-Za-z]{3,9})\s+(?P<day1>\d{1,2})"
+    r"(?:-(?P<day2>\d{1,2}))?\*?\s*(?:\((?P<note>[a-z ]+)\))?\s*Statement"
+)
+
+
+def _strip_html(raw: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", raw)
+    text = html_lib.unescape(text)
+    return re.sub(r"\s+", " ", text)
+
+
+_MONTH_NAMES = {name.lower(): i for i, name in enumerate(_calendar_module.month_name) if name}
+_MONTH_ABBRS = {abbr.lower(): i for i, abbr in enumerate(_calendar_module.month_abbr) if abbr}
+
+
+def _parse_month(name: str) -> int:
+    key = name.lower()
+    if key in _MONTH_NAMES:
+        return _MONTH_NAMES[key]
+    if key in _MONTH_ABBRS:
+        return _MONTH_ABBRS[key]
+    raise ValueError(f"unrecognized month name: {name!r}")
+
+
+def _frame(rows: list[dict]) -> pd.DataFrame:
+    df = pd.DataFrame(rows, columns=CALENDAR_COLUMNS)
+    df["date"] = pd.to_datetime(df["date"]).dt.normalize()
+    df["scheduled"] = df["scheduled"].astype(bool)
+    return df.sort_values(["date", "release", "release_type"]).reset_index(drop=True)
+
+
+def parse_fomc_historical(html: str, year: int, url: str) -> pd.DataFrame:
+    """Scheduled/unscheduled FOMC decision dates from one federalreserve.gov per-year page.
+
+    Header classification: "Conference Call" or an "(unscheduled)" annotation ->
+    release_type "unscheduled", scheduled False. A plain "Meeting" header -> "meeting",
+    scheduled True. A "(cancelled)" meeting is dropped entirely -- no decision was made
+    on that date (RESEARCH Pitfall 2; the cancelled slot is replaced by the emergency
+    unscheduled meetings that appear as their own rows).
+    """
+    text = _strip_html(html)
+    rows: list[dict] = []
+    for m in _HISTORICAL_ENTRY_RE.finditer(text):
+        if int(m.group("year")) != year:
+            continue
+        note = (m.group("note") or "").lower()
+        if note == "cancelled":
+            continue
+        day = int(m.group("day2") or m.group("day1"))
+        month = _parse_month(m.group("mon"))
+        date = pd.Timestamp(year=year, month=month, day=day)
+        kind = m.group("kind")
+        if kind == "Conference Call" or note == "unscheduled":
+            release_type, scheduled = "unscheduled", False
+        else:
+            release_type, scheduled = "meeting", True
+        rows.append(
+            {
+                "date": date,
+                "release": "FOMC",
+                "release_type": release_type,
+                "scheduled": scheduled,
+                "source_url": url,
+            }
+        )
+    if not rows:
+        raise ValueError(f"parsed zero FOMC rows from {url} (year {year})")
+    return _frame(rows)
+
+
+def parse_fomc_calendars(html: str, url: str) -> pd.DataFrame:
+    """Scheduled FOMC decision dates from the current federalreserve.gov calendars page.
+
+    The page groups entries under "<year> FOMC Meetings" section headers. A
+    "(notation vote)" entry (e.g. a vote on the Longer-Run Goals strategy statement) is
+    not a rate-decision meeting and is dropped. An "(unscheduled)" entry, if the page
+    ever carries one, is tagged scheduled False -- the current (2021-2027) page has none,
+    but the rule mirrors parse_fomc_historical's for consistency.
+    """
+    text = _strip_html(html)
+    year_matches = list(_YEAR_SECTION_RE.finditer(text))
+    if not year_matches:
+        raise ValueError(f"parsed zero FOMC year sections from {url}")
+
+    rows: list[dict] = []
+    for i, ym in enumerate(year_matches):
+        year = int(ym.group("year"))
+        chunk_start = ym.end()
+        chunk_end = year_matches[i + 1].start() if i + 1 < len(year_matches) else len(text)
+        chunk = text[chunk_start:chunk_end]
+        for m in _CALENDAR_ENTRY_RE.finditer(chunk):
+            note = (m.group("note") or "").lower()
+            if "notation vote" in note:
+                continue
+            month = _parse_month(m.group("mon2"))
+            day = int(m.group("day2") or m.group("day1"))
+            date = pd.Timestamp(year=year, month=month, day=day)
+            if "unscheduled" in note:
+                release_type, scheduled = "unscheduled", False
+            else:
+                release_type, scheduled = "meeting", True
+            rows.append(
+                {
+                    "date": date,
+                    "release": "FOMC",
+                    "release_type": release_type,
+                    "scheduled": scheduled,
+                    "source_url": url,
+                }
+            )
+    if not rows:
+        raise ValueError(f"parsed zero FOMC rows from {url}")
+    return _frame(rows)
+
+
+def parse_fred_release_dates(
+    payload: dict, label: str, release_id: int, url_template: str
+) -> pd.DataFrame:
+    """CPI/payrolls release dates from a FRED `release/dates` JSON payload.
+
+    Raises on a pagination mismatch (`count` larger than the returned rows -- the job
+    always requests limit=10000, but a future FRED change shouldn't silently truncate
+    a backfill) or an unparseable date.
+    """
+    release_dates = payload.get("release_dates", [])
+    count = payload.get("count", len(release_dates))
+    if count > len(release_dates):
+        raise ValueError(
+            f"FRED release_id={release_id} payload is paginated: count={count} "
+            f"but only {len(release_dates)} release_dates present"
+        )
+    if not release_dates:
+        raise ValueError(f"FRED release_id={release_id} returned zero release_dates")
+
+    rows: list[dict] = []
+    for entry in release_dates:
+        try:
+            date = pd.Timestamp(entry["date"])
+        except (ValueError, TypeError, KeyError) as exc:
+            raise ValueError(
+                f"FRED release_id={release_id} has an unparseable date: {entry!r}"
+            ) from exc
+        source_url = url_template.format(rid=release_id, year=date.year)
+        rows.append(
+            {
+                "date": date,
+                "release": label,
+                "release_type": "release",
+                "scheduled": True,
+                "source_url": source_url,
+            }
+        )
+    return _frame(rows)
+
+
+def merge_calendar(existing: pd.DataFrame | None, fresh: pd.DataFrame, today) -> pd.DataFrame:
+    """Combine a freshly rebuilt calendar with the previously committed one (D-03).
+
+    `fresh` is produced by a full rebuild each run (job fetches calendar_start..horizon
+    every time), so it is always the authoritative superset: fresh wins on any
+    (date, release, release_type) key. The only role of `existing` is the stability
+    check -- a previously committed row dated before `today` that is no longer present
+    in `fresh` means a source stopped confirming history that was already final, which
+    must fail loudly rather than silently rewrite the past.
+    """
+    fresh = fresh.drop_duplicates(subset=["date", "release", "release_type"], keep="last")
+    fresh = fresh.sort_values(["date", "release", "release_type"]).reset_index(drop=True)
+
+    if existing is None:
+        return fresh
+
+    today_ts = pd.Timestamp(today)
+    fresh_pairs = set(zip(fresh["date"], fresh["release"], strict=False))
+    past_existing = existing[existing["date"] < today_ts]
+    missing_pairs = sorted(
+        {
+            (d, r)
+            for d, r in zip(past_existing["date"], past_existing["release"], strict=False)
+            if (d, r) not in fresh_pairs
+        }
+    )
+    if missing_pairs:
+        shown = [(str(d.date()), r) for d, r in missing_pairs[:10]]
+        raise ValueError(f"existing past calendar row(s) missing from fresh source data: {shown}")
+
+    return fresh
+
+
+def validate_macro_calendar(df: pd.DataFrame, settings: Settings, today) -> None:
+    """Raise ValueError on any structural defect. No-op on a well-formed frame."""
+    today_ts = pd.Timestamp(today)
+
+    if df["date"].isna().any():
+        raise ValueError("macro calendar has NaT date(s)")
+
+    dup_mask = df.duplicated(subset=["date", "release", "release_type"], keep=False)
+    if dup_mask.any():
+        dups = df.loc[dup_mask, ["date", "release", "release_type"]].drop_duplicates()
+        raise ValueError(f"duplicate calendar row(s): {dups.to_dict('records')[:10]}")
+
+    bad_url = ~df["source_url"].str.startswith("https://") | df["source_url"].str.contains(
+        "api_key", case=False
+    )
+    if bad_url.any():
+        raise ValueError(f"source_url not public/https-safe on {int(bad_url.sum())} row(s)")
+
+    start_ts = pd.Timestamp(settings.calendar_start)
+    horizon_ts = today_ts + pd.Timedelta(days=settings.calendar_horizon_days)
+    out_of_range = (df["date"] < start_ts) | (df["date"] > horizon_ts)
+    if out_of_range.any():
+        raise ValueError(
+            f"{int(out_of_range.sum())} row(s) outside "
+            f"[{start_ts.date()}, {horizon_ts.date()}]"
+        )
+
+    first_release_by = pd.Timestamp(settings.calendar_first_release_by)
+    for label, _rid, _name in settings.fred_releases:
+        rows = df[df["release"] == label]
+        if len(rows) and rows["date"].min() > first_release_by:
+            raise ValueError(
+                f"{label}'s first date {rows['date'].min().date()} is after "
+                f"calendar_first_release_by {first_release_by.date()}"
+            )
+
+    first_year = start_ts.year
+    last_complete_year = today_ts.year - 1
+    fomc_lo, fomc_hi = settings.fomc_scheduled_per_year
+    mon_lo, mon_hi = settings.monthly_releases_per_year
+    for year in range(first_year, last_complete_year + 1):
+        year_df = df[df["date"].dt.year == year]
+        fomc_scheduled = int(
+            ((year_df["release"] == "FOMC") & year_df["scheduled"]).sum()
+        )
+        if not (fomc_lo <= fomc_scheduled <= fomc_hi):
+            raise ValueError(
+                f"{year}: {fomc_scheduled} scheduled FOMC meetings, expected "
+                f"{fomc_lo}-{fomc_hi}"
+            )
+        for label, _rid, _name in settings.fred_releases:
+            count = int((year_df["release"] == label).sum())
+            if not (mon_lo <= count <= mon_hi):
+                raise ValueError(f"{year}: {count} {label} releases, expected {mon_lo}-{mon_hi}")
