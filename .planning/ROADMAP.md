@@ -79,11 +79,11 @@ Plans:
   4. All detection thresholds live in config (not hard-coded), and the 1993+ backfill produces an episode count in the low hundreds.
   5. `data/macro_calendar.parquet` lists FOMC decision, CPI and payrolls release dates from 1993 with a source URL each, and every detected episode is tagged with any such release inside its window (scheduled vs surprise).
 
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Detection slice: core/events.py (shock/gap/drawdown/rally, D-01 steepest-leg clustering), jobs/detect_events.py, committed episodes.parquet, DET-06 count + DET-07 known-episode tests (wave 1)
+- [x] 02-01-PLAN.md — Detection slice: core/events.py (shock/gap/drawdown/rally, D-01 steepest-leg clustering), jobs/detect_events.py, committed episodes.parquet, DET-06 count + DET-07 known-episode tests (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -140,6 +140,6 @@ Phase 2 complete. Phase 4 requires Phases 1, 2 and 3 complete.
 |-------|----------------|--------|-----------|
 | 0. Core engine rebuild | - | Complete | 2026-10-07 |
 | 1. Foundation, Overview & Strategy Lab | 6/6 | Complete   | 2026-10-08 |
-| 2. Event Detection & Macro Calendar | 0/5 | Planned | - |
+| 2. Event Detection & Macro Calendar | 1/5 | In Progress|  |
 | 3. News Enrichment, Backfill & Review | 0/TBD | Not started | - |
 | 4. Event Explorer, Event Study, Methodology & Nightly Automation | 0/TBD | Not started | - |

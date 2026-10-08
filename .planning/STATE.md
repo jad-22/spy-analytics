@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-10-08T19:40:59.246Z"
-last_activity: 2026-10-08 -- Phase 02 execution started
+last_updated: "2026-10-08T20:03:09.868Z"
+last_activity: 2026-10-08
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 11
-  completed_plans: 6
+  completed_plans: 7
   percent: 25
 ---
 
@@ -27,11 +27,11 @@ look-ahead, total-return prices and costs, event explanations cite in-window sou
 ## Current Position
 
 Phase: 02 (event-detection-macro-calendar) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 02
-Last activity: 2026-10-08 -- Phase 02 execution started
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-10-08
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 64%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [██████████] 100%
 | Phase 01 P01 | 14min | 4 tasks | 22 files |
 | Phase 01 P05 | 17m | 2 tasks | 9 files |
 | Phase 01 P06 | 20min | 3 tasks | 3 files |
+| Phase 02 P01 | 15min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,7 @@ Recent decisions affecting current work:
 - [Phase 01]: D-09 resolved by measurement: naive heatmap_grid was 2.70s cold-sum (DEBOUNCE NEEDED); two numerically-neutral vectorisations (shared per-period MA computation, skipping unused summarise() ratios) brought it to 1.49s against the 2.0s threshold -- REACTIVE OK, no st.form debounce added
 - [Phase 01]: Phase 1 (01-06): left core/config.py rewrite_tolerance_pct and core/validate.py unchanged after the live GitHub Actions nightly run reproduced the same D-13 volume-only rejection seen in 01-02's local repro (Yahoo revises most-recent-day volume post-close) -- tolerance change is a user decision, not an auto-fix
 - [Phase 01]: D-13 gate exempts volume from the rewrite tolerance (user decision 2026-10-08): Yahoo revises latest-session volume post-close; OHLC + adj_close still guarded
+- [Phase 02]: D-01 steepest-leg clustering confirmed empirically: 142 episodes on real 1993+ data, all seven DET-07 known episodes map to exactly one episode each, Feb 2018 and Q4 2018 on separate episode_ids
 
 ### Pending Todos
 
@@ -92,6 +94,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-08T10:17:24.879Z
-Stopped at: Phase 1 plans complete; D-13 volume exempted (99b5953), live nightly 37763263924 succeeded
+Last session: 2026-10-08T20:03:09.858Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
