@@ -79,7 +79,7 @@ Plans:
   4. All detection thresholds live in config (not hard-coded), and the 1993+ backfill produces an episode count in the low hundreds.
   5. `data/macro_calendar.parquet` lists FOMC decision, CPI and payrolls release dates from 1993 with a source URL each, and every detected episode is tagged with any such release inside its window (scheduled vs surprise).
 
-**Plans:** 3/5 plans executed
+**Plans:** 4/5 plans executed
 Plans:
 **Wave 1**
 
@@ -92,7 +92,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-04-PLAN.md — Live local calendar build with Jason's FRED key (checkpoint), A1 release-id confirmation, committed macro_calendar.parquet + CI data test (wave 3)
+- [x] 02-04-PLAN.md — Live local calendar build with Jason's FRED key (checkpoint), A1 release-id confirmation, committed macro_calendar.parquet + CI data test (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -140,6 +140,6 @@ Phase 2 complete. Phase 4 requires Phases 1, 2 and 3 complete.
 |-------|----------------|--------|-----------|
 | 0. Core engine rebuild | - | Complete | 2026-10-07 |
 | 1. Foundation, Overview & Strategy Lab | 6/6 | Complete   | 2026-10-08 |
-| 2. Event Detection & Macro Calendar | 3/5 | In Progress|  |
+| 2. Event Detection & Macro Calendar | 4/5 | In Progress|  |
 | 3. News Enrichment, Backfill & Review | 0/TBD | Not started | - |
 | 4. Event Explorer, Event Study, Methodology & Nightly Automation | 0/TBD | Not started | - |
