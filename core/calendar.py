@@ -21,6 +21,11 @@ from core.config import Settings
 
 CALENDAR_COLUMNS = ["date", "release", "release_type", "scheduled", "source_url"]
 
+# Appended to EPISODE_COLUMNS by tag_episodes (CAL-02). Not imported from core.events --
+# core/calendar.py must stay decoupled from core/events.py (no cross-import required; both
+# are pure siblings called by jobs/detect_events.py).
+TAG_COLUMNS = ("scheduled_releases", "unscheduled_releases", "catalyst")
+
 # "January 6 Conference Call - 1993", "February 2-3 Meeting - 1993",
 # "March 2 (unscheduled) Meeting - 2020", "March 17-18 (cancelled) Meeting - 2020"
 _HISTORICAL_ENTRY_RE = re.compile(
@@ -323,3 +328,46 @@ def validate_macro_calendar(df: pd.DataFrame, settings: Settings, today) -> None
             count = int((year_df["release"] == label).sum())
             if not (mon_lo <= count <= mon_hi):
                 raise ValueError(f"{year}: {count} {label} releases, expected {mon_lo}-{mon_hi}")
+
+
+def tag_episodes(episodes: pd.DataFrame, calendar: pd.DataFrame) -> pd.DataFrame:
+    """Tag each episode with in-window macro releases, scheduled vs surprise (CAL-02).
+
+    For every episode, selects calendar rows whose date falls in
+    [search_from, search_to] inclusive on calendar dates (including non-trading days --
+    this is a calendar-date window, not a trading-day one). Each match is formatted as
+    f"{release} {date:%Y-%m-%d}", sorted by (date, release). Rows with scheduled=True go
+    to scheduled_releases; scheduled=False rows go to unscheduled_releases. catalyst is
+    "scheduled" iff scheduled_releases is non-empty, else "surprise" -- an
+    unscheduled-only or empty window still counts as a surprise, since only a scheduled
+    release makes a move explainable by the calendar (RESEARCH Pitfall 2).
+
+    Pure: does not mutate either input, preserves episodes' row order and columns,
+    appends TAG_COLUMNS at the end. Raises ValueError if calendar is missing a
+    CALENDAR_COLUMNS column.
+    """
+    missing = [c for c in CALENDAR_COLUMNS if c not in calendar.columns]
+    if missing:
+        raise ValueError(f"calendar is missing column(s): {missing}")
+
+    cal = calendar.sort_values(["date", "release"]).reset_index(drop=True)
+    cal_dates = cal["date"]
+    cal_scheduled = cal["scheduled"].astype(bool)
+    cal_labels = cal["release"].astype(str) + " " + cal_dates.dt.strftime("%Y-%m-%d")
+
+    scheduled_col: list[list[str]] = []
+    unscheduled_col: list[list[str]] = []
+    catalyst_col: list[str] = []
+    for search_from, search_to in zip(episodes["search_from"], episodes["search_to"], strict=True):
+        in_window = (cal_dates >= search_from) & (cal_dates <= search_to)
+        scheduled = cal_labels[in_window & cal_scheduled].tolist()
+        unscheduled = cal_labels[in_window & ~cal_scheduled].tolist()
+        scheduled_col.append(scheduled)
+        unscheduled_col.append(unscheduled)
+        catalyst_col.append("scheduled" if scheduled else "surprise")
+
+    tagged = episodes.copy(deep=True)
+    tagged["scheduled_releases"] = scheduled_col
+    tagged["unscheduled_releases"] = unscheduled_col
+    tagged["catalyst"] = catalyst_col
+    return tagged

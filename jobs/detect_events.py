@@ -4,9 +4,12 @@ Usage:
     python -m jobs.detect_events
 
 Reads prices on the total-return basis (so ex-dividend days don't masquerade as gaps or
-shocks, per CLAUDE.md's honesty rule), calls the pure core.events.detect, and writes the
-episode backfill. No network call -- the detector only reads committed data. On any
-detection failure this prints to stderr and exits 1 without touching data/.
+shocks, per CLAUDE.md's honesty rule), calls the pure core.events.detect, tags each
+episode with in-window macro releases via core.calendar.tag_episodes (CAL-02), and
+writes the episode backfill. No network call -- this job only reads committed data (the
+calendar is built separately, locally, by jobs/build_macro_calendar.py). On any
+detection or tagging failure, or if the macro calendar is missing, this prints to
+stderr and exits 1 without touching data/.
 """
 from __future__ import annotations
 
@@ -16,9 +19,17 @@ from pathlib import Path
 
 import pandas as pd
 
+from core.calendar import tag_episodes
 from core.config import SETTINGS
 from core.events import detect
-from core.storage import load_meta, load_prices, price_basis, write_episodes, write_meta
+from core.storage import (
+    load_macro_calendar,
+    load_meta,
+    load_prices,
+    price_basis,
+    write_episodes,
+    write_meta,
+)
 
 
 def _write_episodes(df: pd.DataFrame, episodes_path: Path, meta_path: Path) -> None:
@@ -34,13 +45,29 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prices-path", default=str(SETTINGS.prices_path))
     parser.add_argument("--episodes-path", default=str(SETTINGS.episodes_path))
     parser.add_argument("--meta-path", default=str(SETTINGS.meta_path))
+    parser.add_argument("--calendar-path", default=str(SETTINGS.macro_calendar_path))
     args = parser.parse_args(argv)
 
     try:
         raw = load_prices(Path(args.prices_path))
+    except FileNotFoundError as exc:
+        print(f"episode detection failed: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        calendar = load_macro_calendar(Path(args.calendar_path))
+    except FileNotFoundError:
+        print(
+            f"macro calendar missing at {args.calendar_path}; run jobs.build_macro_calendar "
+            "locally (needs FRED_API_KEY)",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
         prices = price_basis(raw, "total_return")
-        df = detect(prices, SETTINGS)
-    except (ValueError, FileNotFoundError) as exc:
+        df = tag_episodes(detect(prices, SETTINGS), calendar)
+    except ValueError as exc:
         print(f"episode detection failed: {exc}", file=sys.stderr)
         return 1
 

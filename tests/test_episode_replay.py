@@ -14,9 +14,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from core.calendar import TAG_COLUMNS, tag_episodes
 from core.config import SETTINGS
 from core.events import detect
-from core.storage import load_prices, price_basis
+from core.storage import load_macro_calendar, load_prices, price_basis
 
 CUTOFFS = [
     "2002-12-31", "2008-06-30", "2011-12-30",
@@ -165,11 +166,16 @@ def full_history():
     return price_basis(raw, "total_return")
 
 
+@pytest.fixture(scope="module")
+def calendar():
+    return load_macro_calendar(SETTINGS.macro_calendar_path)
+
+
 @pytest.mark.parametrize("cutoff", CUTOFFS)
-def test_closed_episodes_are_replay_stable(full_history, cutoff):
+def test_closed_episodes_are_replay_stable(full_history, calendar, cutoff):
     truncated = full_history.loc[:cutoff]
-    before = detect(truncated, SETTINGS)
-    after = detect(full_history, SETTINGS)
+    before = tag_episodes(detect(truncated, SETTINGS), calendar)
+    after = tag_episodes(detect(full_history, SETTINGS), calendar)
 
     closed = before[before["status"] == "closed"]
     assert len(closed) >= 1
@@ -179,7 +185,7 @@ def test_closed_episodes_are_replay_stable(full_history, cutoff):
 
     exact_cols = [
         "start_date", "end_date", "anchor_date", "direction", "trigger", "triggers",
-        "search_from", "search_to", "status",
+        "search_from", "search_to", "status", "catalyst",
     ]
     for col in exact_cols:
         assert (merged[f"{col}_before"] == merged[f"{col}_after"]).all(), col
@@ -196,6 +202,12 @@ def test_closed_episodes_are_replay_stable(full_history, cutoff):
             merged[f"{col}_after"].to_numpy(dtype=float),
             rtol=1e-9,
         )
+
+    for col in ("scheduled_releases", "unscheduled_releases"):
+        assert col in TAG_COLUMNS
+        before_lists = merged[f"{col}_before"].apply(list)
+        after_lists = merged[f"{col}_after"].apply(list)
+        assert (before_lists == after_lists).all(), col
 
 
 def test_dotcom_leg_still_open_at_2002_cutoff(full_history):
