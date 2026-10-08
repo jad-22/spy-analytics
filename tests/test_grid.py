@@ -128,14 +128,30 @@ def test_rolling_start_strategy_matches_rolling_start(random_prices):
     pd.testing.assert_frame_equal(by_strategy, by_pair)
 
 
-def test_rolling_start_strategy_with_trend_filter_differs(random_prices):
+def test_rolling_start_strategy_with_trend_filter_differs():
+    # random_prices (1500 bdays, ~6y) leaves no room for a 5y rolling horizon after the
+    # sma200 warm-up, so build a longer series here (same generator, more bars).
+    import numpy as np
+
+    rng = np.random.default_rng(7)
+    n = 3000
+    idx = pd.bdate_range("2010-01-01", periods=n, name="date")
+    close = 100 * np.exp(np.cumsum(rng.normal(0.0003, 0.011, n)))
+    open_ = close * np.exp(rng.normal(0, 0.003, n))
+    long_prices = pd.DataFrame(
+        {"open": open_, "high": np.maximum(open_, close) * 1.002,
+         "low": np.minimum(open_, close) * 0.998, "close": close,
+         "adj_close": close, "volume": 1_000},
+        index=idx,
+    )
     unfiltered = rolling_start_strategy(
-        random_prices, MACrossoverStrategy(MASpec("ema", 10), MASpec("sma", 200))
+        long_prices, MACrossoverStrategy(MASpec("ema", 10), MASpec("sma", 200))
     )
     filtered = rolling_start_strategy(
-        random_prices,
+        long_prices,
         MACrossoverStrategy(MASpec("ema", 10), MASpec("sma", 200), trend_filter_period=200),
     )
+    assert not unfiltered.empty
     assert not unfiltered.equals(filtered)
 
 

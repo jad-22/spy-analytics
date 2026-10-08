@@ -58,6 +58,8 @@ class Settings:
     rolling_horizon_years: int = 5  # D-11
     cost_bps_max: float = 50.0
     grid_debounce_threshold_s: float = 2.0  # D-09 profiling threshold, used in Plan 05
+    split_min_years: int = 1  # minimum in-sample length after the start (D-12)
+    split_min_oos_months: int = 6  # minimum out-of-sample length before the latest data
 
 
 SETTINGS = Settings()
