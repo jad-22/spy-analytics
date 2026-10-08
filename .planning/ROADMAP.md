@@ -22,7 +22,7 @@ every weekday night.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation, Overview & Strategy Lab** - Deployed public app with price-only Overview and Strategy Lab pages, reading only committed data (completed 2026-10-08)
-- [ ] **Phase 2: Event Detection & Macro Calendar** - Deterministic, replay-stable episode detection and a sourced US macro calendar (runs in parallel with Phase 1)
+- [x] **Phase 2: Event Detection & Macro Calendar** - Deterministic, replay-stable episode detection and a sourced US macro calendar (runs in parallel with Phase 1) (completed 2026-10-08)
 - [ ] **Phase 3: News Enrichment, Backfill & Review** - Sourced, validated LLM explanations for every episode since 1993, within budget, with manual review and overrides
 - [ ] **Phase 4: Event Explorer, Event Study, Methodology & Nightly Automation** - Full event UI, aggregate event-study stats, methodology page, and unattended nightly pipeline
 
@@ -79,7 +79,7 @@ Plans:
   4. All detection thresholds live in config (not hard-coded), and the 1993+ backfill produces an episode count in the low hundreds.
   5. `data/macro_calendar.parquet` lists FOMC decision, CPI and payrolls release dates from 1993 with a source URL each, and every detected episode is tagged with any such release inside its window (scheduled vs surprise).
 
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 Plans:
 **Wave 1**
 
@@ -96,7 +96,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 02-05-PLAN.md — CAL-02 tagging (scheduled vs surprise) wired into detect job, final episodes.parquet, script-generated docs/PHASE2_CALIBRATION.md (wave 4)
+- [x] 02-05-PLAN.md — CAL-02 tagging (scheduled vs surprise) wired into detect job, final episodes.parquet, script-generated docs/PHASE2_CALIBRATION.md (wave 4)
 
 ### Phase 3: News Enrichment, Backfill & Review
 
@@ -140,6 +140,6 @@ Phase 2 complete. Phase 4 requires Phases 1, 2 and 3 complete.
 |-------|----------------|--------|-----------|
 | 0. Core engine rebuild | - | Complete | 2026-10-07 |
 | 1. Foundation, Overview & Strategy Lab | 6/6 | Complete   | 2026-10-08 |
-| 2. Event Detection & Macro Calendar | 4/5 | In Progress|  |
+| 2. Event Detection & Macro Calendar | 5/5 | Complete   | 2026-10-08 |
 | 3. News Enrichment, Backfill & Review | 0/TBD | Not started | - |
 | 4. Event Explorer, Event Study, Methodology & Nightly Automation | 0/TBD | Not started | - |
