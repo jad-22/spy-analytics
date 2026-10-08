@@ -3,17 +3,24 @@ from __future__ import annotations
 
 import ast
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
 import pytest
+import requests
 
 from core.calendar import (
+    merge_calendar,
     parse_fomc_calendars,
     parse_fomc_historical,
     parse_fred_release_dates,
+    validate_macro_calendar,
 )
 from core.config import SETTINGS
+from core.data import fetch_fred_release_dates, fetch_fred_release_name
+
+SENTINEL_KEY = "TESTKEY-DO-NOT-LEAK"
 
 FIXTURES = Path(__file__).parent / "fixtures" / "macro"
 ROOT = Path(__file__).resolve().parents[1]
@@ -128,6 +135,208 @@ def test_parse_fred_release_dates_raises_on_zero_rows():
     payload = {"count": 0, "release_dates": []}
     with pytest.raises(ValueError):
         parse_fred_release_dates(payload, "CPI", 10, SETTINGS.fred_source_url_template)
+
+
+# --- merge_calendar (D-03 idempotency) -------------------------------------------------
+
+def _row(date, release, release_type="meeting", scheduled=True, url="https://u/1"):
+    return {
+        "date": pd.Timestamp(date), "release": release, "release_type": release_type,
+        "scheduled": scheduled, "source_url": url,
+    }
+
+
+def test_merge_calendar_none_existing_returns_fresh_sorted():
+    fresh = pd.DataFrame([_row("1993-03-01", "CPI"), _row("1993-01-01", "FOMC")])
+    merged = merge_calendar(None, fresh, pd.Timestamp("1994-01-01"))
+    expected = fresh.sort_values(["date", "release", "release_type"]).reset_index(drop=True)
+    pd.testing.assert_frame_equal(merged, expected)
+
+
+def test_merge_calendar_idempotent_with_self():
+    fresh = pd.DataFrame([_row("1993-01-01", "FOMC"), _row("1993-02-01", "CPI")])
+    once = merge_calendar(None, fresh, pd.Timestamp("1994-01-01"))
+    twice = merge_calendar(once, once, pd.Timestamp("1994-01-01"))
+    pd.testing.assert_frame_equal(once, twice)
+
+
+def test_merge_calendar_adds_future_rows_keeps_past_unchanged():
+    existing = pd.DataFrame([_row("1993-01-01", "FOMC")])
+    fresh = pd.DataFrame([_row("1993-01-01", "FOMC"), _row("1995-01-01", "FOMC")])
+    merged = merge_calendar(existing, fresh, pd.Timestamp("1994-01-01"))
+    assert len(merged) == 2
+    assert {pd.Timestamp("1993-01-01"), pd.Timestamp("1995-01-01")} == set(merged["date"])
+
+
+def test_merge_calendar_missing_past_row_raises():
+    existing = pd.DataFrame([_row("1993-01-01", "FOMC")])
+    fresh = pd.DataFrame([_row("1993-02-01", "CPI")])  # 1993-01-01 FOMC no longer present
+    with pytest.raises(ValueError, match="missing"):
+        merge_calendar(existing, fresh, pd.Timestamp("1994-01-01"))
+
+
+def test_merge_calendar_drops_vanished_future_row_without_raising():
+    existing = pd.DataFrame([_row("1995-01-01", "FOMC")])  # future relative to today
+    fresh = pd.DataFrame([_row("1993-01-01", "CPI")])  # fresh no longer confirms it
+    merged = merge_calendar(existing, fresh, pd.Timestamp("1994-01-01"))
+    assert pd.Timestamp("1995-01-01") not in set(merged["date"])
+
+
+def test_merge_calendar_fresh_wins_on_duplicate_key():
+    fresh = pd.DataFrame(
+        [
+            _row("1993-01-01", "FOMC", url="https://old"),
+            _row("1993-01-01", "FOMC", url="https://new"),
+        ]
+    )
+    merged = merge_calendar(None, fresh, pd.Timestamp("1994-01-01"))
+    assert len(merged) == 1
+    assert merged.iloc[0]["source_url"] == "https://new"
+
+
+# --- validate_macro_calendar ------------------------------------------------------------
+
+def _settings_for_validate():
+    return replace(
+        SETTINGS,
+        calendar_start="2000-01-01",
+        calendar_first_release_by="2000-01-31",
+        fomc_scheduled_per_year=(1, 1),
+        monthly_releases_per_year=(1, 1),
+        calendar_horizon_days=400,
+        fred_releases=(("CPI", 10, "Consumer Price Index"),),
+    )
+
+
+def _well_formed_df():
+    return pd.DataFrame(
+        [
+            _row("2000-01-15", "FOMC", scheduled=True, url="https://fed/1"),
+            _row("2000-01-10", "CPI", release_type="release", url="https://alfred/1"),
+        ]
+    )
+
+
+def test_validate_macro_calendar_passes_on_well_formed_frame():
+    validate_macro_calendar(_well_formed_df(), _settings_for_validate(), pd.Timestamp("2001-01-01"))
+
+
+def test_validate_macro_calendar_raises_on_nat_date():
+    df = _well_formed_df()
+    df.loc[0, "date"] = pd.NaT
+    with pytest.raises(ValueError, match="NaT"):
+        validate_macro_calendar(df, _settings_for_validate(), pd.Timestamp("2001-01-01"))
+
+
+def test_validate_macro_calendar_raises_on_duplicate_row():
+    df = pd.concat(
+        [_well_formed_df(), pd.DataFrame([_row("2000-01-15", "FOMC")])], ignore_index=True
+    )
+    with pytest.raises(ValueError, match="duplicate"):
+        validate_macro_calendar(df, _settings_for_validate(), pd.Timestamp("2001-01-01"))
+
+
+def test_validate_macro_calendar_raises_on_insecure_source_url():
+    df = _well_formed_df()
+    df.loc[0, "source_url"] = "http://insecure"
+    with pytest.raises(ValueError, match="https"):
+        validate_macro_calendar(df, _settings_for_validate(), pd.Timestamp("2001-01-01"))
+
+
+def test_validate_macro_calendar_raises_on_api_key_in_url():
+    df = _well_formed_df()
+    df.loc[0, "source_url"] = "https://alfred/1?api_key=leak"
+    with pytest.raises(ValueError, match="https"):
+        validate_macro_calendar(df, _settings_for_validate(), pd.Timestamp("2001-01-01"))
+
+
+def test_validate_macro_calendar_raises_on_date_before_calendar_start():
+    df = _well_formed_df()
+    df.loc[0, "date"] = pd.Timestamp("1999-12-31")
+    with pytest.raises(ValueError, match="outside"):
+        validate_macro_calendar(df, _settings_for_validate(), pd.Timestamp("2001-01-01"))
+
+
+def test_validate_macro_calendar_raises_on_date_beyond_horizon():
+    cfg = _settings_for_validate()
+    df = _well_formed_df()
+    df.loc[0, "date"] = pd.Timestamp("2001-01-01") + pd.Timedelta(
+        days=cfg.calendar_horizon_days + 10
+    )
+    with pytest.raises(ValueError, match="outside"):
+        validate_macro_calendar(df, cfg, pd.Timestamp("2001-01-01"))
+
+
+def test_validate_macro_calendar_raises_when_fred_first_date_too_late():
+    df = _well_formed_df()
+    df.loc[1, "date"] = pd.Timestamp("2000-02-15")  # after calendar_first_release_by
+    with pytest.raises(ValueError, match="calendar_first_release_by"):
+        validate_macro_calendar(df, _settings_for_validate(), pd.Timestamp("2001-01-01"))
+
+
+def test_validate_macro_calendar_raises_on_fomc_count_out_of_bounds():
+    df = _well_formed_df()
+    df = df[df["release"] != "FOMC"].reset_index(drop=True)
+    with pytest.raises(ValueError, match="FOMC"):
+        validate_macro_calendar(df, _settings_for_validate(), pd.Timestamp("2001-01-01"))
+
+
+def test_validate_macro_calendar_raises_on_monthly_release_count_out_of_bounds():
+    df = _well_formed_df()
+    df = df[df["release"] != "CPI"].reset_index(drop=True)
+    with pytest.raises(ValueError, match="CPI"):
+        validate_macro_calendar(df, _settings_for_validate(), pd.Timestamp("2001-01-01"))
+
+
+# --- secret-leak hardening (D-02, T-02-09) -----------------------------------------------
+
+def test_fetch_fred_release_dates_does_not_leak_key_on_connection_error(monkeypatch):
+    def fake_get(url, params=None, timeout=None):
+        raise requests.ConnectionError(f"failed hitting {url}?api_key={SENTINEL_KEY}")
+
+    monkeypatch.setattr("requests.get", fake_get)
+    with pytest.raises(ValueError) as exc_info:
+        fetch_fred_release_dates(10, SENTINEL_KEY, "1993-01-01", "https://api.stlouisfed.org/fred", 5.0)
+    assert SENTINEL_KEY not in str(exc_info.value)
+
+
+def test_fetch_fred_release_dates_does_not_leak_key_on_bad_status(monkeypatch):
+    class _FakeResp:
+        status_code = 400
+        url = f"https://api.stlouisfed.org/fred/release/dates?api_key={SENTINEL_KEY}"
+
+    monkeypatch.setattr("requests.get", lambda url, params=None, timeout=None: _FakeResp())
+    with pytest.raises(ValueError) as exc_info:
+        fetch_fred_release_dates(10, SENTINEL_KEY, "1993-01-01", "https://api.stlouisfed.org/fred", 5.0)
+    assert SENTINEL_KEY not in str(exc_info.value)
+
+
+def test_fetch_fred_release_name_does_not_leak_key_on_connection_error(monkeypatch):
+    def fake_get(url, params=None, timeout=None):
+        raise requests.ConnectionError(f"failed hitting {url}?api_key={SENTINEL_KEY}")
+
+    monkeypatch.setattr("requests.get", fake_get)
+    with pytest.raises(ValueError) as exc_info:
+        fetch_fred_release_name(10, SENTINEL_KEY, "https://api.stlouisfed.org/fred", 5.0)
+    assert SENTINEL_KEY not in str(exc_info.value)
+
+
+def test_fetch_fred_release_name_does_not_leak_key_on_bad_status(monkeypatch):
+    class _FakeResp:
+        status_code = 400
+        url = f"https://api.stlouisfed.org/fred/release?api_key={SENTINEL_KEY}"
+
+    monkeypatch.setattr("requests.get", lambda url, params=None, timeout=None: _FakeResp())
+    with pytest.raises(ValueError) as exc_info:
+        fetch_fred_release_name(10, SENTINEL_KEY, "https://api.stlouisfed.org/fred", 5.0)
+    assert SENTINEL_KEY not in str(exc_info.value)
+
+
+def test_fetch_fred_functions_raise_on_empty_api_key():
+    with pytest.raises(ValueError):
+        fetch_fred_release_dates(10, "", "1993-01-01", "https://api.stlouisfed.org/fred", 5.0)
+    with pytest.raises(ValueError):
+        fetch_fred_release_name(10, "", "https://api.stlouisfed.org/fred", 5.0)
 
 
 # --- purity --------------------------------------------------------------------------
