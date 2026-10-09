@@ -113,14 +113,30 @@ Plans:
   5. Jason can accept, edit or reject any event record using a local-only review tool; his overrides live in `data/event_overrides.json`, win over model output at read time, and are never merged back into `events.json` on disk.
 
 **Plans**: 7 plans
+Plans:
+**Wave 1**
 
-Plans:
 - [ ] 03-01-PLAN.md — Offline enrichment slice: config (D-01 prices/caps), pydantic schema + status rules, NewsProvider/NullProvider, incremental job
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 03-02-PLAN.md — ClaudeSearchProvider (web search + structured output), source cross-validation, sanitized raw response, spend ledger, budget guard, Sonnet escalation
 - [ ] 03-03-PLAN.md — Local review CLI (accept/edit/reject) and read-time override merge
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 03-04-PLAN.md — Script-generated budget report vs verified pricing, CLAUDE.md correction, backfill.yml (key as secret), enrichment report, data-integrity tests
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 03-05-PLAN.md — Provision secret, paid 9-episode spike, go/adjust/abort decision
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 03-06-PLAN.md — Full 1993+ backfill via workflow, coverage + spend verification, escalation decision
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 03-07-PLAN.md — Manual review by Jason, gate tests, roadmap close-out
 
 ### Phase 4: Event Explorer, Event Study, Methodology & Nightly Automation
