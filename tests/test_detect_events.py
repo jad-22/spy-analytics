@@ -182,3 +182,13 @@ def test_main_fails_without_writing_when_calendar_ends_early(tmp_path, tmp_meta_
     assert detect_events.main(args) == 1
     assert not (tmp_path / "episodes.parquet").exists()
     assert "CPI ends" in capsys.readouterr().err
+
+
+def test_report_does_not_call_unscheduled_fomc_rows_actions():
+    """WR-01: unscheduled rows include no-change conference calls (eight in 1993 alone)."""
+    from scripts.report_phase2 import build_report
+
+    calendar = load_macro_calendar(SETTINGS.macro_calendar_path)
+    report = build_report(load_episodes(SETTINGS.episodes_path), calendar)
+    assert "FOMC actions" not in report
+    assert "Unscheduled FOMC calls or meetings" in report

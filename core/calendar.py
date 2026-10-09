@@ -1,9 +1,11 @@
 """Macro-release calendar: FOMC/CPI/payrolls parsing, merge and validation (CAL-01).
 
 Pure: no network call, no Streamlit import, must not import core.data or core.storage.
-This is the macro-*release* calendar (FOMC decisions, CPI, payrolls) -- a different
+This is the macro-*release* calendar (FOMC meetings, CPI, payrolls) -- a different
 concept from core/market_calendar.py's NYSE trading-session calendar; keep the two
-separate.
+separate. Scheduled FOMC rows are the regular decision meetings. Unscheduled FOMC rows
+are every conference call or unscheduled meeting the Fed lists; many of those made no
+policy change, so they mark "the FOMC convened", never "the FOMC acted".
 
 HTML is parsed with stdlib `re` + `html.unescape` only (no new dependency, no
 pandas.read_html). jobs/build_macro_calendar.py owns all network I/O and calls these
@@ -78,11 +80,11 @@ def _frame(rows: list[dict]) -> pd.DataFrame:
 def parse_fomc_historical(
     html: str, year: int, url: str, non_decision: tuple[str, ...] = ()
 ) -> pd.DataFrame:
-    """Scheduled/unscheduled FOMC decision dates from one federalreserve.gov per-year page.
+    """Scheduled meetings and unscheduled calls/meetings from one federalreserve.gov year page.
 
     Header classification: "Conference Call" or an "(unscheduled)" annotation ->
-    release_type "unscheduled", scheduled False. A plain "Meeting" header -> "meeting",
-    scheduled True. A "(cancelled)" meeting is dropped entirely -- no decision was made
+    release_type "unscheduled", scheduled False -- whether or not the call changed policy.
+    A plain "Meeting" header -> "meeting", scheduled True. A "(cancelled)" meeting is dropped entirely -- no decision was made
     on that date (RESEARCH Pitfall 2; the cancelled slot is replaced by the emergency
     unscheduled meetings that appear as their own rows). Dates in `non_decision`
     (Settings.fomc_non_decision_meetings) are dropped for the same reason.

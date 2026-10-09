@@ -148,7 +148,7 @@ def _calendar_coverage_section(calendar: pd.DataFrame) -> list[str]:
             f"{rows['date'].max().date()} |"
         )
     unscheduled_fomc = int(((calendar["release"] == "FOMC") & ~calendar["scheduled"]).sum())
-    lines += ["", f"Unscheduled FOMC actions: {unscheduled_fomc}", ""]
+    lines += ["", f"Unscheduled FOMC calls or meetings (many changed no policy): {unscheduled_fomc}", ""]
     return lines
 
 
