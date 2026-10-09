@@ -140,6 +140,6 @@ Phase 2 complete. Phase 4 requires Phases 1, 2 and 3 complete.
 |-------|----------------|--------|-----------|
 | 0. Core engine rebuild | - | Complete | 2026-10-07 |
 | 1. Foundation, Overview & Strategy Lab | 6/6 | Complete   | 2026-10-08 |
-| 2. Event Detection & Macro Calendar | 5/5 | Complete   | 2026-10-08 |
+| 2. Event Detection & Macro Calendar | 5/5 | Complete    | 2026-10-09 |
 | 3. News Enrichment, Backfill & Review | 0/TBD | Not started | - |
 | 4. Event Explorer, Event Study, Methodology & Nightly Automation | 0/TBD | Not started | - |
