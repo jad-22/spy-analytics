@@ -122,3 +122,9 @@ None. This plan's artifacts (override model, storage readers, review CLI) are fu
 ---
 *Phase: 03-news-enrichment-backfill-review*
 *Completed: 2026-10-09*
+
+## Self-Check: PASSED
+
+All 5 created/touched files confirmed present on disk; all 5 task/metadata commit hashes
+(`e82a178`, `4237dca`, `ac86e3e`, `3eeccdd`, `709c1e9`) confirmed present in
+`git log --oneline --all`.
