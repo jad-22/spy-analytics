@@ -716,7 +716,9 @@ per the deprecation note, but new code should not be written against it.
 | A4 | Basic `web_search_20250305` (not `_20260209`/`_20260318`) is sufficient for this project's per-episode search volume | Standard Stack, Alternatives Considered | Low — if an episode's search needs turn out to be more complex than expected (e.g., many competing stories), dynamic filtering could reduce token costs, but budget headroom (~10x) makes this a non-issue either way. |
 | A5 | Combining `output_config` (structured outputs) with the `web_search` server tool in one request works as expected in production, based on one independent (non-Anthropic-official) report plus the GA docs' adjacent client-tool example | Architecture Patterns (Pattern 4), Common Pitfall 3 | Medium — explicitly why a pre-backfill spike on a small sample is recommended rather than assumed; if it doesn't compose cleanly, the fallback is a two-call pattern (call 1: web_search tool only, free-form response; call 2: no tools, `output_config` only, extracting structured JSON from call 1's content) — more API calls but same total cost order of magnitude given the tiny per-episode token volume. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Resolved 2026-10-09 by Jason in `03-CONTEXT.md`: D-02/D-03 (module placement: pure `core/news/`, networked provider in `jobs/`), D-04 (backfill via `workflow_dispatch`, key as Actions secret), D-05 (CLI review tool). Calendar-context-in-prompt left to planner discretion (yes, per 03-02).
 
 1. **Module placement: `core/news/claude_search.py` vs. extending `core/data.py`?**
    - What we know: CLAUDE.md's literal rule names only `core/data.py` as the network exception;
