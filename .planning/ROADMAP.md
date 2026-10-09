@@ -120,8 +120,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — ClaudeSearchProvider (web search + structured output), source cross-validation, sanitized raw response, spend ledger, budget guard, Sonnet escalation
-- [ ] 03-03-PLAN.md — Local review CLI (accept/edit/reject) and read-time override merge
+- [x] 03-02-PLAN.md — ClaudeSearchProvider (web search + structured output), source cross-validation, sanitized raw response, spend ledger, budget guard, Sonnet escalation
+- [x] 03-03-PLAN.md — Local review CLI (accept/edit/reject) and read-time override merge
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -166,5 +166,5 @@ Phase 2 complete. Phase 4 requires Phases 1, 2 and 3 complete.
 | 0. Core engine rebuild | - | Complete | 2026-10-07 |
 | 1. Foundation, Overview & Strategy Lab | 6/6 | Complete   | 2026-10-08 |
 | 2. Event Detection & Macro Calendar | 5/5 | Complete    | 2026-10-09 |
-| 3. News Enrichment, Backfill & Review | 1/7 | In Progress|  |
+| 3. News Enrichment, Backfill & Review | 3/7 | In Progress|  |
 | 4. Event Explorer, Event Study, Methodology & Nightly Automation | 0/TBD | Not started | - |
