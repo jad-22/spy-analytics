@@ -64,3 +64,12 @@ def test_core_has_no_streamlit_import():
             assert module != "streamlit" and not module.startswith("streamlit."), (
                 f"{path} imports streamlit"
             )
+
+
+def test_core_news_has_no_network_or_sdk_imports():
+    """D-02: core/news/ is pure -- no network library, no anthropic SDK, no jobs/scripts
+    import. The networked provider (D-03) lives in jobs/, not here."""
+    for path in (ROOT / "core" / "news").rglob("*.py"):
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for module in _imported_modules(tree):
+            assert not _is_forbidden(module), f"{path} imports forbidden module '{module}'"
