@@ -124,5 +124,39 @@ class Settings:
     monthly_releases_per_year: tuple[int, int] = (10, 13)  # shutdown years can delay/cancel one
     calendar_horizon_days: int = 800  # max days past today a scheduled date may sit
 
+    # News enrichment (NEWS-01..08, REV-01..02, OPS-03)
+    events_path: Path = field(default=DATA_DIR / "events.json")  # NEWS-05/06 record store
+    event_overrides_path: Path = field(default=DATA_DIR / "event_overrides.json")  # REV-02
+    news_spend_ledger_path: Path = field(default=DATA_DIR / "enrichment_spend.json")  # NEWS-07 spend log
+    news_model: str = "claude-haiku-5-5"  # D-01: default enrichment model, verified GA
+    news_escalation_model: str = "claude-sonnet-5-5"  # D-01: needs_review re-runs only
+    news_model_prices_usd_per_mtok: tuple[tuple[str, float, float], ...] = (
+        ("claude-haiku-5-5", 0.10, 0.50),
+        ("claude-sonnet-5-5", 2.0, 10.0),
+    )  # D-01: (model, input $/MTok, output $/MTok), prompts <= 100k tokens
+    news_web_search_usd_per_1k: float = 10.0  # D-01: $ per 1,000 web searches
+    news_pricing_verified_on: str = "2026-10-09"  # date prices above were checked against docs
+    news_pricing_sources: tuple[str, ...] = (
+        "https://platform.claude.com/docs/en/models/overview",
+        "https://platform.claude.com/docs/en/about-claude/pricing",
+    )
+    news_budget_usd: float = 25.0  # NEWS-07: total cap including spike and escalation
+    news_episode_cost_reserve_usd: float = 0.25  # NEWS-07: headroom guard before each call
+    news_max_episodes_per_run: int = 150  # NEWS-07 hard cap, >= 142 so the backfill fits one run
+    news_max_searches_per_request: int = 3  # NEWS-07: web_search tool max_uses
+    news_max_output_tokens: int = 1500
+    news_max_continuations: int = 3  # pause_turn re-calls
+    news_max_failures_per_run: int = 5
+    news_api_timeout_s: float = 120.0
+    news_confidence_threshold: float = 0.5  # NEWS-04
+    news_headline_max_chars: int = 90  # SPEC
+    news_prompt_version: str = "v1"  # NEWS-05
+    web_search_tool_type: str = "web_search_20250305"  # RESEARCH primary recommendation
+    anthropic_api_key_env: str = "ANTHROPIC_API_KEY"  # D-04/OPS-03: never a CLI arg
+    # Budget-estimate assumptions (used by core/news/cost.py::estimate_backfill_usd)
+    news_estimate_searches_per_episode: float = 1.5
+    news_estimate_input_tokens_per_episode: int = 5000
+    news_estimate_output_tokens_per_episode: int = 500
+
 
 SETTINGS = Settings()

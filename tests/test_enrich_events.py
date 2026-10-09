@@ -11,10 +11,9 @@ from dataclasses import replace
 import pandas as pd
 import pytest
 
-from jobs import enrich_events
-
 from core.config import SETTINGS
 from core.storage import write_episodes, write_events
+from jobs import enrich_events
 
 
 def _episode_row(

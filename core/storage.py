@@ -93,3 +93,44 @@ def write_meta(meta: dict, path: Path) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n")
+
+
+def write_json_atomic(obj: object, path: Path) -> None:
+    """Write any JSON-serialisable object to a temporary sibling, then rename over
+    `path`, so an interrupted run never leaves a truncated committed file. Pretty-printed
+    and key-sorted for stable diffs (news enrichment's events.json / event_overrides.json
+    / enrichment_spend.json, NEWS-05..07)."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(obj, indent=2, sort_keys=True, default=str) + "\n")
+    os.replace(tmp, path)
+
+
+def load_events(path: Path, missing_ok: bool = False) -> list[dict]:
+    """Read the committed events.json "records" list. If `missing_ok`, a missing file
+    returns [] instead of raising FileNotFoundError."""
+    path = Path(path)
+    if missing_ok and not path.exists():
+        return []
+    return json.loads(path.read_text())["records"]
+
+
+def write_events(records: list[dict], path: Path) -> None:
+    """Write data/events.json, sorted by episode_id for stable diffs. Single call site:
+    jobs/enrich_events.py."""
+    sorted_records = sorted(records, key=lambda r: r["episode_id"])
+    write_json_atomic({"schema_version": 1, "records": sorted_records}, path)
+
+
+def load_spend_ledger(path: Path) -> list[dict]:
+    """Read the committed enrichment spend ledger's "runs" list. [] if missing."""
+    path = Path(path)
+    if not path.exists():
+        return []
+    return json.loads(path.read_text())["runs"]
+
+
+def write_spend_ledger(entries: list[dict], path: Path) -> None:
+    """Write data/enrichment_spend.json. Single call site: jobs/enrich_events.py."""
+    write_json_atomic({"schema_version": 1, "runs": entries}, path)
