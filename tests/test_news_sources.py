@@ -187,7 +187,7 @@ def test_filter_sources_in_window_duplicate_claimed_url_kept_once():
         ClaimedSource(url="https://a.example.com/1"),
     ]
     results = {"https://a.example.com/1": {"title": "T", "page_age": "2020-03-15"}}
-    kept, dropped = filter_sources_in_window(
+    kept, _dropped = filter_sources_in_window(
         claimed, results, date(2020, 3, 13), date(2020, 3, 17)
     )
     assert len(kept) == 1
