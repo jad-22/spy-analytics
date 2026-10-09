@@ -1,0 +1,38 @@
+{
+  "_comment": "Synthetic fixture for tests/test_claude_provider.py -- not a real Anthropic API response. First of a two-call pause_turn continuation; the second call's response is claude_response_explained.json. Episode window: 2020-03-06..2020-03-10.",
+  "id": "msg_test_pause",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "stop_reason": "pause_turn",
+  "usage": {
+    "input_tokens": 500,
+    "output_tokens": 50,
+    "server_tool_use": {
+      "web_search_requests": 1
+    }
+  },
+  "content": [
+    {
+      "type": "server_tool_use",
+      "id": "srvtool_0",
+      "name": "web_search",
+      "input": {
+        "query": "SPY market move March 2020 part 1"
+      }
+    },
+    {
+      "type": "web_search_tool_result",
+      "tool_use_id": "srvtool_0",
+      "content": [
+        {
+          "type": "web_search_result",
+          "url": "https://a.example.com/in-window",
+          "title": "In-window story",
+          "page_age": "March 9, 2020",
+          "encrypted_content": "ENC0-DO-NOT-STORE"
+        }
+      ]
+    }
+  ]
+}

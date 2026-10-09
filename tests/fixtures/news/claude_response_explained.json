@@ -1,0 +1,58 @@
+{
+  "_comment": "Synthetic fixture for tests/test_claude_provider.py -- not a real Anthropic API response. Episode window: 2020-03-06..2020-03-10.",
+  "id": "msg_test_explained",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "stop_reason": "end_turn",
+  "usage": {
+    "input_tokens": 1200,
+    "output_tokens": 300,
+    "server_tool_use": {
+      "web_search_requests": 1
+    }
+  },
+  "content": [
+    {
+      "type": "server_tool_use",
+      "id": "srvtool_1",
+      "name": "web_search",
+      "input": {
+        "query": "SPY market move March 2020"
+      }
+    },
+    {
+      "type": "web_search_tool_result",
+      "tool_use_id": "srvtool_1",
+      "content": [
+        {
+          "type": "web_search_result",
+          "url": "https://a.example.com/in-window",
+          "title": "In-window story",
+          "page_age": "March 9, 2020",
+          "encrypted_content": "ENC1-DO-NOT-STORE"
+        },
+        {
+          "type": "web_search_result",
+          "url": "https://b.example.com/outside-window",
+          "title": "Outside-window story",
+          "page_age": "January 1, 2020",
+          "encrypted_content": "ENC2-DO-NOT-STORE"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "text": "{\"status\": \"explained\", \"headline\": \"Oil price war and COVID fears drag SPY lower\", \"summary\": \"A sharp oil price collapse combined with escalating COVID-19 fears triggered a broad market selloff.\", \"category\": \"geopolitics\", \"region\": \"Global\", \"drivers\": [\"oil price war\", \"pandemic fears\"], \"sources\": [{\"url\": \"https://a.example.com/in-window\", \"title\": \"model claimed title A\"}, {\"url\": \"https://b.example.com/outside-window\", \"title\": \"model claimed title B\"}, {\"url\": \"https://c.example.com/never-searched\", \"title\": \"model claimed title C\"}], \"confidence\": 0.8, \"conflicting_sources\": false}",
+      "citations": [
+        {
+          "type": "web_search_result_location",
+          "url": "https://a.example.com/in-window",
+          "title": "In-window story",
+          "encrypted_index": "EIDX1-DO-NOT-STORE",
+          "cited_text": "Oil prices collapsed over the weekend after OPEC+ talks broke down."
+        }
+      ]
+    }
+  ]
+}
