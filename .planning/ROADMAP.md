@@ -22,8 +22,7 @@ every weekday night.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation, Overview & Strategy Lab** - Deployed public app with price-only Overview and Strategy Lab pages, reading only committed data (completed 2026-10-08)
-- [x] **Phase 2: Event Detection & Macro Calendar** - Deterministic, replay-stable episode detection and a sourced US macro calendar (runs in parallel with Phase 1)
- (completed 2026-10-08)
+- [x] **Phase 2: Event Detection & Macro Calendar** - Deterministic, replay-stable episode detection and a sourced US macro calendar (runs in parallel with Phase 1) (completed 2026-10-08)
 - [ ] **Phase 3: News Enrichment, Backfill & Review** - Sourced, validated LLM explanations for every episode since 1993, within budget, with manual review and overrides
 - [ ] **Phase 4: Event Explorer, Event Study, Methodology & Nightly Automation** - Full event UI, aggregate event-study stats, methodology page, and unattended nightly pipeline
 
