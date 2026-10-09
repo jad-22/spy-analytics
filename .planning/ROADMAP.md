@@ -22,7 +22,8 @@ every weekday night.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation, Overview & Strategy Lab** - Deployed public app with price-only Overview and Strategy Lab pages, reading only committed data (completed 2026-10-08)
-- [x] **Phase 2: Event Detection & Macro Calendar** - Deterministic, replay-stable episode detection and a sourced US macro calendar (runs in parallel with Phase 1) (completed 2026-10-08)
+- [x] **Phase 2: Event Detection & Macro Calendar** - Deterministic, replay-stable episode detection and a sourced US macro calendar (runs in parallel with Phase 1)
+ (completed 2026-10-08)
 - [ ] **Phase 3: News Enrichment, Backfill & Review** - Sourced, validated LLM explanations for every episode since 1993, within budget, with manual review and overrides
 - [ ] **Phase 4: Event Explorer, Event Study, Methodology & Nightly Automation** - Full event UI, aggregate event-study stats, methodology page, and unattended nightly pipeline
 
@@ -112,7 +113,16 @@ Plans:
   4. The one-off backfill covers every detected episode since 1993, stays within the $25 cap enforced by hard per-run episode and per-request search caps with spend logged, and the Anthropic API key exists only as a GitHub Actions secret (never in Streamlit Cloud or the repo).
   5. Jason can accept, edit or reject any event record using a local-only review tool; his overrides live in `data/event_overrides.json`, win over model output at read time, and are never merged back into `events.json` on disk.
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Offline enrichment slice: config (D-01 prices/caps), pydantic schema + status rules, NewsProvider/NullProvider, incremental job
+- [ ] 03-02-PLAN.md — ClaudeSearchProvider (web search + structured output), source cross-validation, sanitized raw response, spend ledger, budget guard, Sonnet escalation
+- [ ] 03-03-PLAN.md — Local review CLI (accept/edit/reject) and read-time override merge
+- [ ] 03-04-PLAN.md — Script-generated budget report vs verified pricing, CLAUDE.md correction, backfill.yml (key as secret), enrichment report, data-integrity tests
+- [ ] 03-05-PLAN.md — Provision secret, paid 9-episode spike, go/adjust/abort decision
+- [ ] 03-06-PLAN.md — Full 1993+ backfill via workflow, coverage + spend verification, escalation decision
+- [ ] 03-07-PLAN.md — Manual review by Jason, gate tests, roadmap close-out
 
 ### Phase 4: Event Explorer, Event Study, Methodology & Nightly Automation
 
