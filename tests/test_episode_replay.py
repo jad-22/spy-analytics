@@ -221,3 +221,94 @@ def test_dotcom_leg_still_open_at_2002_cutoff(full_history):
     peak_date = close.index[peak_pos]
 
     assert (closed["start_date"] < peak_date).all()
+
+
+# --- CR-01 (02-REVIEW.md): rally spans must not reopen a closed episode ---------------------
+
+RALLY_ONLY = dataclasses.replace(
+    SETTINGS, shock_z_threshold=1e9, gap_threshold=1.0, drawdown_threshold=0.9
+)
+
+
+def _prices_from_closes(closes, start: str = "2024-01-01"):
+    idx = pd.bdate_range(start, periods=len(closes), name="date")
+    closes = np.asarray(closes, dtype=float)
+    return pd.DataFrame(
+        {"open": closes, "high": closes, "low": closes, "close": closes}, index=idx
+    )
+
+
+def test_closed_rally_survives_append_that_extends_its_merged_span():
+    """Flat ~100, one jump to 110, ~109 for rally_window_days + 3 bars, a new high, then a
+    second jump and a flat tail. The rally candidates' merged span runs past the peak, so
+    before the fix a rally marked closed reopened with a new end_date and move_pct when
+    the second jump was appended. Every prefix's closed episodes must match the full run."""
+    w = RALLY_ONLY.rally_window_days
+    noise = [0.001 * ((-1) ** i) for i in range(80)]
+    closes = (
+        [100.0 + x for x in noise]
+        + [110.0]
+        + [109.0 + x for x in noise[: w + 3]]
+        + [111.0, 109.0 * 1.081]
+        + [117.8 + 0.01 * i for i in range(2 * w + 20)]  # rising: no live peak
+    )
+    full = detect(_prices_from_closes(closes), RALLY_ONLY).set_index("episode_id")
+
+    closed_rallies = 0
+    for k in range(80, len(closes)):
+        prefix = detect(_prices_from_closes(closes[:k]), RALLY_ONLY)
+        for _, row in prefix[prefix["status"] == "closed"].iterrows():
+            assert row["episode_id"] in full.index, (k, row["episode_id"])
+            later = full.loc[row["episode_id"]]
+            for col in ["start_date", "end_date", "status"]:
+                assert later[col] == row[col], (k, col)
+            assert later["move_pct"] == pytest.approx(row["move_pct"], rel=1e-9), k
+            closed_rallies += row["trigger"] == "rally"
+    assert closed_rallies > 0
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_closed_episodes_stable_at_every_prefix_with_all_detectors(seed):
+    """Every closed episode found on any prefix of a random walk reappears unchanged on
+    the full series. Small windows keep it fast; every detector, rally included, is on."""
+    settings = dataclasses.replace(
+        SETTINGS,
+        shock_sigma_window=10,
+        shock_z_threshold=2.0,
+        gap_threshold=0.02,
+        drawdown_threshold=0.05,
+        rally_threshold=0.05,
+        rally_window_days=8,
+        merge_window_days=2,
+    )
+    rng = np.random.default_rng(seed)
+    n = 260
+    closes = 100.0 * np.exp(np.cumsum(rng.normal(0.0004, 0.015, n)))
+    opens = closes * np.exp(rng.normal(0.0, 0.008, n))
+    idx = pd.bdate_range("2024-01-01", periods=n, name="date")
+    full_prices = pd.DataFrame(
+        {"open": opens, "high": closes, "low": closes, "close": closes}, index=idx
+    )
+    full = detect(full_prices, settings).set_index("episode_id")
+
+    cols = [
+        "start_date", "end_date", "anchor_date", "direction", "trigger", "triggers",
+        "search_from", "search_to", "recovery_date", "status",
+    ]
+    checked = 0
+    for k in range(40, n):
+        prefix = detect(full_prices.iloc[:k], settings)
+        for _, row in prefix[prefix["status"] == "closed"].iterrows():
+            assert row["episode_id"] in full.index, (k, row["episode_id"])
+            later = full.loc[row["episode_id"]]
+            _assert_rows_match(row, later, cols)
+            for col in ["move_pct", "max_z", "severity"]:
+                assert later[col] == pytest.approx(row[col], rel=1e-9), (k, col)
+            checked += 1
+    assert checked > 0
+
+
+def test_search_window_reach_fits_inside_merge_window():
+    """closure_frontier's proof needs every search window to end before the frontier."""
+    reach = max(SETTINGS.search_post_days, SETTINGS.structural_search_half_width)
+    assert reach <= SETTINGS.merge_window_days

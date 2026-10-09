@@ -61,6 +61,10 @@ class Leg:
     end_pos: int
     move: float
     recovery_pos: int | None
+    # Last position whose data can still change this leg. A rally's merged candidate span
+    # can run past its peak (end_pos); a future candidate starting inside the span would
+    # merge into it and move the peak. None means end_pos.
+    reach_pos: int | None = None
 
 
 def log_returns(close: pd.Series) -> pd.Series:
@@ -142,6 +146,7 @@ def rally_legs(close: pd.Series, threshold: float, window: int) -> list[Leg]:
     rise from that trough to i is at least `threshold`, the (trough, i) interval is a
     candidate. Overlapping/touching candidates merge (sort-and-sweep), then each merged
     span's true trough (earliest min) and peak (earliest max after the trough) are located.
+    The span's end is kept as the leg's reach_pos, since closure must wait for it.
     """
     values = close.to_numpy(dtype=float)
     n = len(values)
@@ -171,7 +176,7 @@ def rally_legs(close: pd.Series, threshold: float, window: int) -> list[Leg]:
         peak_segment = values[trough_pos : end + 1]
         peak_pos = trough_pos + int(peak_segment.argmax())
         move = values[peak_pos] / values[trough_pos] - 1
-        legs.append(Leg("rally", trough_pos, peak_pos, move, None))
+        legs.append(Leg("rally", trough_pos, peak_pos, move, None, reach_pos=end))
 
     return legs
 
@@ -202,17 +207,20 @@ def cluster_legs(legs: list[Leg], merge_window_days: int) -> list[list[Leg]]:
 def closure_frontier(close: pd.Series, settings: Settings) -> int:
     """First integer position that future (not-yet-seen) rows could still touch (DET-05).
 
-    A cluster with ``end_pos + settings.merge_window_days < closure_frontier(...)`` can
-    never be changed by appending more rows to `close`, and is therefore safe to mark
-    "closed". Proof, by the three ways a future row could reach back into an existing
-    cluster:
+    A cluster with ``reach + settings.merge_window_days < closure_frontier(...)``, where
+    ``reach`` is the largest of its legs' end_pos and reach_pos, can never be changed by
+    appending more rows to `close`, and is therefore safe to mark "closed". Proof, by the
+    three ways a future row could reach back into an existing cluster:
 
     (a) A future shock/gap leg is a single day at the first not-yet-seen position,
         ``len(close)``. It can only start there or later.
-    (b) A future rally leg flagged at some future position looks back at most
-        ``settings.rally_window_days`` bars for its trough (see rally_legs), so the
-        earliest position any future rally's (start_pos, end_pos) interval can touch is
-        ``len(close) - settings.rally_window_days``.
+    (b) A future rally candidate (trough j, i) flagged at some future position i looks
+        back at most ``settings.rally_window_days`` bars for its trough (see rally_legs),
+        so ``j >= len(close) - settings.rally_window_days``. rally_legs merges a candidate
+        into an existing span when j is at or before that span's end -- the leg's
+        reach_pos, which can lie past its peak -- so the cluster test uses reach, not
+        end_pos. With ``reach < frontier <= j`` no future candidate can join an existing
+        span, and a new span's leg starts at j, more than merge_window_days past reach.
     (c) A future drawdown leg can only start at a peak position. If the last observed
         close is below the series' own running all-time peak (by any depth -- a shallow
         dip may deepen into a qualifying leg later), that peak's position is still a live
@@ -223,9 +231,11 @@ def closure_frontier(close: pd.Series, settings: Settings) -> int:
     at or after it may still be absorbed into a cluster that currently ends before it,
     because cluster_legs' sweep-merge only ever extends a cluster's end forward and never
     reaches backward across a gap wider than merge_window_days. Everything used to compute
-    a closed cluster's anchor_date, move_pct, max_z, severity and search window is drawn
-    only from positions inside [start_pos, end_pos] -- strictly inside the closed window --
-    and shock_zscores' rolling sigma is itself causal (lagged one day), so it never reaches
+    a closed cluster's anchor_date, move_pct, max_z and severity is drawn only from
+    positions inside [start_pos, reach]; the search window reaches at most
+    max(search_post_days, structural_search_half_width) past end_pos, which stays before
+    the frontier while that is at most merge_window_days (asserted in tests/test_episode_replay.py).
+    shock_zscores' rolling sigma is itself causal (lagged one day), so it never reaches
     into future rows either. A closed cluster's fields are therefore a pure function of data
     already fixed at closure time.
     """
@@ -272,6 +282,9 @@ def detect(prices: pd.DataFrame, settings: Settings) -> pd.DataFrame:
     for cluster in cluster_legs(legs, settings.merge_window_days):
         start_pos = min(leg.start_pos for leg in cluster)
         end_pos = max(leg.end_pos for leg in cluster)
+        reach = max(
+            leg.end_pos if leg.reach_pos is None else leg.reach_pos for leg in cluster
+        )
         kinds = {leg.kind for leg in cluster}
         trigger = next(kind for kind in settings.trigger_precedence if kind in kinds)
         triggers = ",".join(sorted(kinds))
@@ -327,7 +340,7 @@ def detect(prices: pd.DataFrame, settings: Settings) -> pd.DataFrame:
 
         status = (
             "closed"
-            if end_pos + settings.merge_window_days < frontier and drawdown_recovered
+            if reach + settings.merge_window_days < frontier and drawdown_recovered
             else "open"
         )
 
