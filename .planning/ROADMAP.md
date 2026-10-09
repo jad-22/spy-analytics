@@ -125,7 +125,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 03-04-PLAN.md — Script-generated budget report vs verified pricing, CLAUDE.md correction, backfill.yml (key as secret), enrichment report, data-integrity tests
+- [x] 03-04-PLAN.md — Script-generated budget report vs verified pricing, CLAUDE.md correction, backfill.yml (key as secret), enrichment report, data-integrity tests
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -166,5 +166,5 @@ Phase 2 complete. Phase 4 requires Phases 1, 2 and 3 complete.
 | 0. Core engine rebuild | - | Complete | 2026-10-07 |
 | 1. Foundation, Overview & Strategy Lab | 6/6 | Complete   | 2026-10-08 |
 | 2. Event Detection & Macro Calendar | 5/5 | Complete    | 2026-10-09 |
-| 3. News Enrichment, Backfill & Review | 3/7 | In Progress|  |
+| 3. News Enrichment, Backfill & Review | 4/7 | In Progress|  |
 | 4. Event Explorer, Event Study, Methodology & Nightly Automation | 0/TBD | Not started | - |
