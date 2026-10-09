@@ -7,6 +7,8 @@ from __future__ import annotations
 import copy
 
 import pytest
+from pydantic import ValidationError
+
 from core.news.overrides import (
     EDITABLE_FIELDS,
     Override,
@@ -14,8 +16,6 @@ from core.news.overrides import (
     apply_overrides,
     upsert_override,
 )
-from pydantic import ValidationError
-
 from core.storage import (
     load_effective_events,
     load_event_overrides,

@@ -13,6 +13,7 @@ from pathlib import Path
 import pandas as pd
 
 from core.data import read_prices, to_total_return
+from core.news.overrides import Override, apply_overrides
 
 BASES: tuple[str, str] = ("total_return", "price_only")
 
@@ -121,6 +122,37 @@ def write_events(records: list[dict], path: Path) -> None:
     jobs/enrich_events.py."""
     sorted_records = sorted(records, key=lambda r: r["episode_id"])
     write_json_atomic({"schema_version": 1, "records": sorted_records}, path)
+
+
+def load_event_overrides(path: Path) -> list[Override]:
+    """Read data/event_overrides.json's "overrides" list. [] if missing (REV-02)."""
+    path = Path(path)
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text())
+    return [Override.model_validate(o) for o in payload["overrides"]]
+
+
+def write_event_overrides(overrides: list[Override], path: Path) -> None:
+    """Write data/event_overrides.json, sorted by episode_id for stable diffs. Single
+    call site: scripts/review_events.py."""
+    sorted_overrides = sorted(overrides, key=lambda o: o.episode_id)
+    write_json_atomic(
+        {
+            "schema_version": 1,
+            "overrides": [o.model_dump(mode="json") for o in sorted_overrides],
+        },
+        path,
+    )
+
+
+def load_effective_events(events_path: Path, overrides_path: Path) -> list[dict]:
+    """Read events.json merged with event_overrides.json at read time (REV-02) --
+    overrides win, events.json is never rewritten by this function. A missing
+    overrides file leaves events unchanged; a missing events file returns []."""
+    events = load_events(events_path, missing_ok=True)
+    overrides = load_event_overrides(overrides_path)
+    return apply_overrides(events, overrides)
 
 
 def load_spend_ledger(path: Path) -> list[dict]:
