@@ -26,14 +26,14 @@ piece fails.
 - ✓ Price loading from yfinance with Stooq fallback, plus a parquet snapshot (Phase 0)
 - ✓ Notebook re-run documented: 0 of 24 rules beat buy-and-hold (`docs/PHASE0_FINDINGS.md`) (Phase 0)
 - ✓ CI: ruff + pytest on every push (Phase 0)
+- ✓ Event detection: shock days, gap opens, drawdown and rally episodes, clustering, severity, replay-stable closed/open status; 142 episodes since 1993 — Validated in Phase 2: Event Detection & Macro Calendar
+- ✓ US macro calendar (FOMC, CPI, payrolls; 1138 rows, 1993–2027) tagging scheduled vs surprise catalysts — Validated in Phase 2: Event Detection & Macro Calendar
 
 ### Active
 
 - [ ] Overview page: price chart (line/candle), MA overlays, drawdown regime shading, KPI strip
 - [ ] Strategy Lab: rule picker, trend filter, costs, equity vs B&H, metrics, short × long heatmap, rolling-start chart, in-sample/out-of-sample split
 - [ ] Nightly price refresh writing `data/` snapshots; app reads only committed files
-- [ ] Event detection: shock days, gap opens, drawdown and rally episodes, clustering, severity
-- [ ] US macro calendar (FOMC, CPI, payrolls) tagging scheduled vs surprise catalysts
 - [ ] News enrichment via Claude API + web search into validated, cited JSON records
 - [ ] Manual review and overrides for event records
 - [ ] Event Explorer: event markers, detail panel, filterable table
@@ -85,10 +85,11 @@ piece fails.
 | Focused Strategy Lab (MA crossovers + 200D filter) behind a `Strategy` interface | The notebook's real lesson is window-dependence; rigour beats breadth | — Pending |
 | Read-only Streamlit app fed by committed Parquet/JSON, refreshed nightly | Ephemeral FS, no secrets in app, avoids rate limits | — Pending |
 | History starts 1993 (SPY inception) for the app and events | Includes 2000 and 2008, the richest events for the Event Study; Phase 0 findings stay on 2010 for notebook parity | — Pending |
-| Macro calendar US-only (FOMC, CPI, payrolls) | Simplest; drives most SPY moves | — Pending |
+| Macro calendar US-only (FOMC, CPI, payrolls) | Simplest; drives most SPY moves | ✓ Good — built in Phase 2; FRED lists non-print revision dates, kept in an explicit config list; rebuild needs the FRED key locally |
 | Public GitHub repo | Code is part of the portfolio; free Actions minutes | — Pending |
 | Drop the notebook's oracle trades from the UI | Hindsight, not attainable; lesson noted in Methodology | — Pending |
 | Strategy Lab and events story weighted equally | Both are portfolio headlines | — Pending |
+| Only "closed" episodes are enriched; closure waits for any span future data could extend | Phase 3 API spend must never be wasted on an episode that later changes | ✓ Good — replay tests at every prefix (Phase 2) |
 | Corrected engine: 0/24 MA rules beat B&H | Verified on live data, both windows, raw and TR, 0 and 5 bps | ✓ Good |
 
 ## Evolution
@@ -109,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-07 after initialization*
+*Last updated: 2026-10-09 after Phase 2*
