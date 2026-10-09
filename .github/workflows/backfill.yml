@@ -1,0 +1,74 @@
+name: news-backfill
+
+# D-04/OPS-03: the ANTHROPIC_API_KEY repo secret exists only inside this workflow's
+# "Enrich episodes" step env -- never in nightly.yml, never in Streamlit Cloud, never
+# the repo. Manual-only by design: nightly enrichment of newly-detected episodes is a
+# Phase 4 concern, not this one-off paid backfill/spike/escalation job.
+#
+# workflow_dispatch inputs are typed by whoever dispatches this job and could carry
+# shell metacharacters (T-03-16): every input below reaches the shell only through the
+# "Enrich episodes" step's env mapping, never interpolated directly into a run: script
+# line, so a malicious/malformed input can only ever appear as the *value* of a quoted
+# shell variable.
+
+on:
+  workflow_dispatch:
+    inputs:
+      episode_ids:
+        description: "comma-separated episode_ids; empty = all pending"
+        type: string
+        default: ""
+      max_episodes:
+        description: "empty = config cap"
+        type: string
+        default: ""
+      escalate_needs_review:
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: news-backfill
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Enrich episodes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EPISODE_IDS: ${{ inputs.episode_ids }}
+          MAX_EPISODES: ${{ inputs.max_episodes }}
+          ESCALATE: ${{ inputs.escalate_needs_review }}
+        run: |
+          ARGS=(--provider claude --episode-ids "$EPISODE_IDS" --max-episodes "$MAX_EPISODES")
+          if [ "$ESCALATE" = "true" ]; then
+            ARGS+=(--escalate-needs-review)
+          fi
+          python -m jobs.enrich_events "${ARGS[@]}"
+      - name: Commit enrichment data
+        # Runs even after a failed/cancelled enrich step so every paid record already
+        # written -- and the spend ledger accounting for it -- is still committed; the
+        # job's own exit status (checked below) is never masked by this step succeeding.
+        if: ${{ !cancelled() }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data/events.json data/enrichment_spend.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "no data change"
+          else
+            git commit -m "data: news enrichment run"
+            git pull --rebase
+            git push
+          fi
