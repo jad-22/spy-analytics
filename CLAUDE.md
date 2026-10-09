@@ -11,6 +11,7 @@ explanations for major moves. Authority docs: `docs/SPEC.md` (what and why), `do
 .\.venv\python.exe -m ruff check .
 .\.venv\python.exe -m pytest -q
 .\.venv\python.exe -m scripts.rerun_notebook_grid   # live data, needs internet
+.\.venv\python.exe -m scripts.review_events         # local-only enrichment review, D-05
 ```
 
 `.venv` is a conda-created Python 3.12 env. Use `.venv\python.exe`, not `Scripts\`. The
@@ -34,9 +35,11 @@ system `python` is Anaconda 3.9 and too old.
 ## Corrections to the generated Technology Stack section below
 
 These override the auto-generated stack text (sourced from `.planning/research/STACK.md`):
-- The model IDs `claude-haiku-5-5` / `claude-sonnet-5-5` and their prices are **unverified** and
-  don't match the known current models (`claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5`,
-  `claude-haiku-4-5-20251001`). Verify against official docs before any API spend.
+- The model IDs `claude-haiku-5-5` / `claude-sonnet-5-5` and their prices (input/output
+  $0.10/$0.50 and $2/$10 per MTok, web search $10 per 1,000 searches) were verified against
+  `platform.claude.com` on 2026-10-09 (Phase 3 D-01) and live in `core/config.py`.
+  `docs/PHASE3_BUDGET.md` is generated from that config by `scripts.report_news_budget` --
+  re-verify against the source URLs it lists before any paid run more than two weeks later.
 - No `ttl` on `st.cache_data`: each nightly data commit redeploys the app and clears the cache.
 - No Stooq fallback: yfinance with retries; on failure the last committed snapshot stays.
 
