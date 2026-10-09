@@ -6,6 +6,7 @@ app/components/store.py.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -31,11 +32,19 @@ def load_episodes(path: Path) -> pd.DataFrame:
     return pd.read_parquet(path)
 
 
-def write_episodes(df: pd.DataFrame, path: Path) -> None:
-    """Write the episode backfill. Single call site: jobs/detect_events.py."""
+def _write_parquet_atomic(df: pd.DataFrame, path: Path) -> None:
+    """Write to a temporary sibling, then rename over `path`, so an interrupted run never
+    leaves a truncated committed file."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(path, index=False)
+    tmp = path.with_name(path.name + ".tmp")
+    df.to_parquet(tmp, index=False)
+    os.replace(tmp, path)
+
+
+def write_episodes(df: pd.DataFrame, path: Path) -> None:
+    """Write the episode backfill. Single call site: jobs/detect_events.py."""
+    _write_parquet_atomic(df, path)
 
 
 def load_macro_calendar(path: Path) -> pd.DataFrame:
@@ -45,9 +54,7 @@ def load_macro_calendar(path: Path) -> pd.DataFrame:
 
 def write_macro_calendar(df: pd.DataFrame, path: Path) -> None:
     """Write the macro calendar. Single call site: jobs/build_macro_calendar.py."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(path, index=False)
+    _write_parquet_atomic(df, path)
 
 
 def price_basis(raw: pd.DataFrame, basis: str) -> pd.DataFrame:

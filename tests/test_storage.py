@@ -6,7 +6,15 @@ import pandas as pd
 import pytest
 
 from core.data import to_total_return
-from core.storage import BASES, build_meta, load_meta, price_basis, write_meta
+from core.storage import (
+    BASES,
+    build_meta,
+    load_episodes,
+    load_meta,
+    price_basis,
+    write_episodes,
+    write_meta,
+)
 
 
 def test_price_basis_total_return(tiny_prices):
@@ -58,3 +66,11 @@ def test_write_meta_load_meta_roundtrip(tmp_path, tiny_prices):
     write_meta(meta, path)
     loaded = load_meta(path)
     assert loaded == meta
+
+
+def test_write_episodes_replaces_atomically(tmp_path):
+    path = tmp_path / "episodes.parquet"
+    write_episodes(pd.DataFrame({"a": [1]}), path)
+    write_episodes(pd.DataFrame({"a": [2, 3]}), path)
+    assert load_episodes(path)["a"].tolist() == [2, 3]
+    assert [p.name for p in tmp_path.iterdir()] == ["episodes.parquet"]

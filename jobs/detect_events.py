@@ -32,10 +32,10 @@ from core.storage import (
 )
 
 
-def _write_episodes(df: pd.DataFrame, episodes_path: Path, meta_path: Path) -> None:
-    """Single call site for the write path."""
+def _write_episodes(df: pd.DataFrame, episodes_path: Path, meta: dict, meta_path: Path) -> None:
+    """Single call site for the write path. Caller loads meta first, so a missing or
+    corrupt meta.json fails before anything is written."""
     write_episodes(df, episodes_path)
-    meta = load_meta(meta_path)
     meta["detector_version"] = SETTINGS.detector_version
     write_meta(meta, meta_path)
 
@@ -50,7 +50,8 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         raw = load_prices(Path(args.prices_path))
-    except FileNotFoundError as exc:
+        meta = load_meta(Path(args.meta_path))
+    except (OSError, ValueError) as exc:
         print(f"episode detection failed: {exc}", file=sys.stderr)
         return 1
 
@@ -71,6 +72,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"episode detection failed: {exc}", file=sys.stderr)
         return 1
 
+    if df.empty:
+        print("episode detection failed: zero episodes detected", file=sys.stderr)
+        return 1
+
     lo, hi = SETTINGS.episode_count_bounds
     if not lo <= len(df) <= hi:
         print(
@@ -78,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
 
-    _write_episodes(df, Path(args.episodes_path), Path(args.meta_path))
+    _write_episodes(df, Path(args.episodes_path), meta, Path(args.meta_path))
     print(
         f"wrote {len(df)} episodes ({df['start_date'].iloc[0].date()} to "
         f"{df['end_date'].iloc[-1].date()}) to {args.episodes_path}"

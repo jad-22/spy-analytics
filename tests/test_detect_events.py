@@ -132,3 +132,39 @@ def test_main_fails_without_touching_data_when_calendar_missing(tmp_path, tmp_me
     )
     assert exit_code == 1
     assert not episodes_path.exists()
+
+
+# --- WR-04 (02-REVIEW.md): fail before writing anything ------------------------------------
+
+def _main_args(tmp_path, meta_path):
+    return [
+        "--prices-path", str(SETTINGS.prices_path),
+        "--episodes-path", str(tmp_path / "episodes.parquet"),
+        "--meta-path", str(meta_path),
+        "--calendar-path", str(SETTINGS.macro_calendar_path),
+    ]
+
+
+def test_main_fails_without_writing_when_meta_missing(tmp_path, capsys):
+    exit_code = detect_events.main(_main_args(tmp_path, tmp_path / "missing_meta.json"))
+    assert exit_code == 1
+    assert not (tmp_path / "episodes.parquet").exists()
+    assert "episode detection failed" in capsys.readouterr().err
+
+
+def test_main_fails_without_writing_when_meta_corrupt(tmp_path):
+    meta_path = tmp_path / "meta.json"
+    meta_path.write_text("{not json")
+    assert detect_events.main(_main_args(tmp_path, meta_path)) == 1
+    assert not (tmp_path / "episodes.parquet").exists()
+    assert meta_path.read_text() == "{not json"
+
+
+def test_main_fails_without_writing_on_zero_episodes(tmp_path, tmp_meta_path, monkeypatch):
+    monkeypatch.setattr(
+        detect_events, "detect", lambda prices, settings: pd.DataFrame(columns=EPISODE_COLUMNS)
+    )
+    before = tmp_meta_path.read_text()
+    assert detect_events.main(_main_args(tmp_path, tmp_meta_path)) == 1
+    assert not (tmp_path / "episodes.parquet").exists()
+    assert tmp_meta_path.read_text() == before
