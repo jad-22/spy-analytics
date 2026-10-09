@@ -26,6 +26,7 @@ from core.calendar import (
     parse_fomc_calendars,
     parse_fomc_historical,
     parse_fred_release_dates,
+    past_calendar_changes,
     validate_macro_calendar,
 )
 from core.config import SETTINGS
@@ -60,6 +61,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--retry-wait-max", type=float, default=SETTINGS.fetch_wait_max_s)
     parser.add_argument(
         "--today", default=pd.Timestamp.now(tz="US/Eastern").strftime("%Y-%m-%d")
+    )
+    parser.add_argument(
+        "--accept-history-change",
+        action="store_true",
+        help="write even if past rows vanished or changed; prints the diff (check it first)",
     )
     args = parser.parse_args(argv)
 
@@ -125,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         fresh = fresh.reset_index(drop=True)
 
         existing = load_macro_calendar(calendar_path) if calendar_path.exists() else None
-        merged = merge_calendar(existing, fresh, today)
+        merged = merge_calendar(existing, fresh, today, args.accept_history_change)
         validate_macro_calendar(merged, SETTINGS, today)
     except Exception as exc:  # noqa: BLE001 - any failure keeps the last calendar
         print(f"macro calendar build failed: {exc}; keeping last calendar", file=sys.stderr)
@@ -134,10 +140,17 @@ def main(argv: list[str] | None = None) -> int:
     if existing is None:
         added, removed = len(merged), 0
     else:
-        existing_keys = set(zip(existing["date"], existing["release"], strict=False))
-        merged_keys = set(zip(merged["date"], merged["release"], strict=False))
-        added = len(merged_keys - existing_keys)
-        removed = len(existing_keys - merged_keys)
+        past_removed, past_added = past_calendar_changes(existing, merged, today)
+        for label, rows in (("removed/changed", past_removed), ("added", past_added)):
+            for r in rows.itertuples():
+                print(
+                    f"past row {label}: {r.date.date()} {r.release} {r.release_type} "
+                    f"scheduled={r.scheduled}"
+                )
+        key = ["date", "release", "release_type", "scheduled"]
+        old = set(existing[key].itertuples(index=False, name=None))
+        new = set(merged[key].itertuples(index=False, name=None))
+        added, removed = len(new - old), len(old - new)
 
     _write_calendar(merged, calendar_path)
 
@@ -148,7 +161,7 @@ def main(argv: list[str] | None = None) -> int:
                 f"{label}: {len(rows)} rows, {rows['date'].min().date()} to "
                 f"{rows['date'].max().date()}"
             )
-    print(f"added {added} / removed {removed} future rows vs existing")
+    print(f"added {added} / removed {removed} rows vs existing")
     print(f"wrote {len(merged)} rows to {calendar_path}")
     return 0
 

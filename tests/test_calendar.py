@@ -19,6 +19,7 @@ from core.calendar import (
     parse_fomc_calendars,
     parse_fomc_historical,
     parse_fred_release_dates,
+    past_calendar_changes,
     tag_episodes,
     validate_macro_calendar,
 )
@@ -288,7 +289,7 @@ def test_merge_calendar_missing_past_row_raises():
 
 def test_merge_calendar_drops_vanished_future_row_without_raising():
     existing = pd.DataFrame([_row("1995-01-01", "FOMC")])  # future relative to today
-    fresh = pd.DataFrame([_row("1993-01-01", "CPI")])  # fresh no longer confirms it
+    fresh = pd.DataFrame([_row("1996-01-01", "CPI")])  # fresh no longer confirms it
     merged = merge_calendar(existing, fresh, pd.Timestamp("1994-01-01"))
     assert pd.Timestamp("1995-01-01") not in set(merged["date"])
 
@@ -645,3 +646,54 @@ def test_check_calendar_coverage_rejects_a_release_with_no_rows():
         check_calendar_coverage(
             _cov_episodes("2026-01-20"), _cov_calendar("2026-02-11"), ("FOMC", "payrolls")
         )
+
+
+# --- WR-03 (02-REVIEW.md): past rows compared on the full key ------------------------------
+
+def test_merge_calendar_past_scheduled_flip_raises():
+    existing = pd.DataFrame([_row("1993-01-01", "FOMC", scheduled=True)])
+    fresh = pd.DataFrame([_row("1993-01-01", "FOMC", scheduled=False)])
+    with pytest.raises(ValueError, match="accept-history-change"):
+        merge_calendar(existing, fresh, pd.Timestamp("1994-01-01"))
+
+
+def test_merge_calendar_past_release_type_change_raises():
+    existing = pd.DataFrame([_row("1993-01-01", "FOMC", release_type="meeting")])
+    fresh = pd.DataFrame([_row("1993-01-01", "FOMC", release_type="unscheduled")])
+    with pytest.raises(ValueError, match="changed"):
+        merge_calendar(existing, fresh, pd.Timestamp("1994-01-01"))
+
+
+def test_merge_calendar_new_past_scheduled_row_raises():
+    existing = pd.DataFrame([_row("1993-01-01", "FOMC")])
+    fresh = pd.DataFrame([_row("1993-01-01", "FOMC"), _row("1993-02-10", "CPI", "release")])
+    with pytest.raises(ValueError, match="new scheduled"):
+        merge_calendar(existing, fresh, pd.Timestamp("1994-01-01"))
+
+
+def test_merge_calendar_new_past_unscheduled_row_is_accepted():
+    existing = pd.DataFrame([_row("1993-01-01", "FOMC")])
+    fresh = pd.DataFrame(
+        [_row("1993-01-01", "FOMC"), _row("1993-03-05", "FOMC", "unscheduled", scheduled=False)]
+    )
+    merged = merge_calendar(existing, fresh, pd.Timestamp("1994-01-01"))
+    assert len(merged) == 2
+
+
+def test_merge_calendar_accept_history_change_returns_fresh():
+    existing = pd.DataFrame([_row("1993-01-01", "FOMC")])
+    fresh = pd.DataFrame([_row("1993-02-01", "CPI", "release")])
+    merged = merge_calendar(
+        existing, fresh, pd.Timestamp("1994-01-01"), accept_history_change=True
+    )
+    assert merged["date"].tolist() == [pd.Timestamp("1993-02-01")]
+
+
+def test_past_calendar_changes_reports_a_flip_as_removed_and_added():
+    existing = pd.DataFrame(
+        [_row("1993-01-01", "FOMC", scheduled=True), _row("1995-01-01", "CPI")]
+    )
+    fresh = pd.DataFrame([_row("1993-01-01", "FOMC", scheduled=False)])
+    removed, added = past_calendar_changes(existing, fresh, pd.Timestamp("1994-01-01"))
+    assert removed["scheduled"].tolist() == [True]
+    assert added["scheduled"].tolist() == [False]

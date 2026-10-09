@@ -242,3 +242,23 @@ def test_main_release_name_mismatch_returns_1(tmp_path, monkeypatch, capsys):
     assert "Producer Price Index" in captured.err
     assert SENTINEL_KEY not in captured.err
     assert SENTINEL_KEY not in captured.out
+
+
+def test_main_accept_history_change_writes_and_prints_diff(tmp_path, monkeypatch, capsys):
+    """WR-03: a maintainer can apply a checked correction to past rows deliberately."""
+    calendar_path = tmp_path / "cal.parquet"
+    _install_fakes(monkeypatch)
+    assert build_macro_calendar.main(_argv(calendar_path)) == 0
+
+    fred_10 = json.loads((FIXTURES / "fred_release_dates_10.json").read_text())
+    dropped = fred_10["release_dates"][0]["date"]
+    fred_10["release_dates"] = fred_10["release_dates"][1:]
+    fred_10["count"] = len(fred_10["release_dates"])
+    _install_fakes(monkeypatch, fred_10=fred_10)
+    capsys.readouterr()
+
+    assert build_macro_calendar.main([*_argv(calendar_path), "--accept-history-change"]) == 0
+    out = capsys.readouterr().out
+    assert f"past row removed/changed: {dropped} CPI" in out
+    cpi = load_macro_calendar(calendar_path).query("release == 'CPI'")
+    assert pd.Timestamp(dropped) not in set(cpi["date"])

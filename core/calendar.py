@@ -225,35 +225,70 @@ def drop_non_release_dates(
     return df[~is_skip].reset_index(drop=True), df[is_skip].reset_index(drop=True)
 
 
-def merge_calendar(existing: pd.DataFrame | None, fresh: pd.DataFrame, today) -> pd.DataFrame:
+# The columns a past calendar row must keep across rebuilds: tag_episodes reads all of them.
+_HISTORY_KEY = ["date", "release", "release_type", "scheduled"]
+
+
+def past_calendar_changes(
+    existing: pd.DataFrame, fresh: pd.DataFrame, today
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """(removed, added) rows dated before `today`, compared on the full _HISTORY_KEY.
+
+    A row whose release_type or scheduled flag changed shows up in both frames.
+    """
+    today_ts = pd.Timestamp(today)
+
+    def _past_keys(df: pd.DataFrame) -> pd.DataFrame:
+        past = df.loc[df["date"] < today_ts, _HISTORY_KEY].copy()
+        past["scheduled"] = past["scheduled"].astype(bool)
+        return past.drop_duplicates()
+
+    old, new = _past_keys(existing), _past_keys(fresh)
+    both = old.merge(new, on=_HISTORY_KEY, how="outer", indicator=True)
+    removed = both.loc[both["_merge"] == "left_only", _HISTORY_KEY]
+    added = both.loc[both["_merge"] == "right_only", _HISTORY_KEY]
+    return removed.reset_index(drop=True), added.reset_index(drop=True)
+
+
+def merge_calendar(
+    existing: pd.DataFrame | None,
+    fresh: pd.DataFrame,
+    today,
+    accept_history_change: bool = False,
+) -> pd.DataFrame:
     """Combine a freshly rebuilt calendar with the previously committed one (D-03).
 
     `fresh` is produced by a full rebuild each run (job fetches calendar_start..horizon
     every time), so it is always the authoritative superset: fresh wins on any
     (date, release, release_type) key. The only role of `existing` is the stability
-    check -- a previously committed row dated before `today` that is no longer present
-    in `fresh` means a source stopped confirming history that was already final, which
-    must fail loudly rather than silently rewrite the past.
+    check on rows dated before `today`, compared on date, release, release_type and the
+    scheduled flag (tag_episodes reads all four, so any change would rewrite closed
+    episodes' tags). A past row that vanished or changed, or a new past scheduled row,
+    fails loudly unless `accept_history_change` is set by a maintainer who has checked
+    it (e.g. a print postponed by a shutdown). A new past unscheduled row is accepted: an
+    emergency FOMC action between rebuilds is expected.
     """
     fresh = fresh.drop_duplicates(subset=["date", "release", "release_type"], keep="last")
     fresh = fresh.sort_values(["date", "release", "release_type"]).reset_index(drop=True)
 
-    if existing is None:
+    if existing is None or accept_history_change:
         return fresh
 
-    today_ts = pd.Timestamp(today)
-    fresh_pairs = set(zip(fresh["date"], fresh["release"], strict=False))
-    past_existing = existing[existing["date"] < today_ts]
-    missing_pairs = sorted(
-        {
-            (d, r)
-            for d, r in zip(past_existing["date"], past_existing["release"], strict=False)
-            if (d, r) not in fresh_pairs
-        }
-    )
-    if missing_pairs:
-        shown = [(str(d.date()), r) for d, r in missing_pairs[:10]]
-        raise ValueError(f"existing past calendar row(s) missing from fresh source data: {shown}")
+    removed, added = past_calendar_changes(existing, fresh, today)
+    added_scheduled = added[added["scheduled"]]
+    if len(removed) or len(added_scheduled):
+
+        def _show(df: pd.DataFrame) -> list[str]:
+            return [
+                f"{r.date.date()} {r.release} {r.release_type} scheduled={r.scheduled}"
+                for r in df.head(10).itertuples()
+            ]
+
+        raise ValueError(
+            "past calendar rows changed (rerun with --accept-history-change after "
+            f"checking): missing or changed {_show(removed)}, new scheduled "
+            f"{_show(added_scheduled)}"
+        )
 
     return fresh
 
