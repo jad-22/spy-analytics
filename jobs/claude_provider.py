@@ -1,10 +1,12 @@
-"""ClaudeSearchProvider: the repo's only `import anthropic` (D-03). Used only by
-jobs/enrich_events.py -- never by app/ or core/, which stay network-free (D-02). The
-Anthropic API key itself is never read, stored or printed by this module;
-jobs/enrich_events.py owns key handling and passes an already-constructed client in
-(D-04/OPS-03). Every SDK exception is re-raised as a ValueError naming only the
-episode_id and the exception's type name -- never str(exc), which could embed request
-details (NEWS-05 Pitfall #5, mirrors core/data.py::fetch_fred_release_dates).
+"""ClaudeSearchProvider: the module that actually calls the Anthropic API (D-03). Used
+only by jobs/enrich_events.py -- never by app/ or core/, which stay network-free
+(D-02). jobs/enrich_events.py also imports `anthropic`, but only for its
+Anthropic(...) client constructor (make_client); it never calls messages.create or
+models.retrieve itself. The Anthropic API key is never read, stored or printed by this
+module; jobs/enrich_events.py owns key handling and passes an already-constructed
+client in (D-04/OPS-03). Every SDK exception is re-raised as a ValueError naming only
+the episode_id and the exception's type name -- never str(exc), which could embed
+request details (NEWS-05 Pitfall #5, mirrors core/data.py::fetch_fred_release_dates).
 """
 from __future__ import annotations
 
