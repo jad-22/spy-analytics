@@ -4,9 +4,9 @@ core/config.py, cost math, ledger totals and the pre-spend budget estimate.
 from __future__ import annotations
 
 import pytest
-from core.news.cost import cost_usd, estimate_backfill_usd, ledger_total_usd, price_for
 
 from core.config import SETTINGS
+from core.news.cost import cost_usd, estimate_backfill_usd, ledger_total_usd, price_for
 from core.news.schema import Usage
 
 
