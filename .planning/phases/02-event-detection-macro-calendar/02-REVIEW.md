@@ -23,7 +23,7 @@ findings:
   warning: 4
   info: 7
   total: 12
-status: issues_found
+status: fixed (see 02-REVIEW-FIX.md)
 ---
 
 # Phase 2: Code Review Report
