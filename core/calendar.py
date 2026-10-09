@@ -330,6 +330,27 @@ def validate_macro_calendar(df: pd.DataFrame, settings: Settings, today) -> None
                 raise ValueError(f"{year}: {count} {label} releases, expected {mon_lo}-{mon_hi}")
 
 
+def check_calendar_coverage(
+    episodes: pd.DataFrame, calendar: pd.DataFrame, releases: tuple[str, ...]
+) -> None:
+    """Raise ValueError if any release's last calendar date is before the latest episode
+    search_to. Past a release's last date, tag_episodes would see an empty window and call
+    a move a "surprise" even if a print happened, and a later rebuild would flip it."""
+    if episodes.empty:
+        return
+    through = episodes["search_to"].max()
+    short = []
+    for release in releases:
+        last = calendar.loc[calendar["release"] == release, "date"].max()
+        if pd.isna(last) or last < through:
+            short.append(f"{release} ends {'never' if pd.isna(last) else last.date()}")
+    if short:
+        raise ValueError(
+            f"macro calendar does not cover episodes through {through.date()} "
+            f"({', '.join(short)}); rebuild it with jobs.build_macro_calendar"
+        )
+
+
 def tag_episodes(episodes: pd.DataFrame, calendar: pd.DataFrame) -> pd.DataFrame:
     """Tag each episode with in-window macro releases, scheduled vs surprise (CAL-02).
 

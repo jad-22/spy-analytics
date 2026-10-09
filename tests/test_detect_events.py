@@ -13,7 +13,7 @@ import pytest
 from core.calendar import TAG_COLUMNS
 from core.config import SETTINGS
 from core.events import EPISODE_COLUMNS
-from core.storage import load_episodes, load_meta
+from core.storage import load_episodes, load_macro_calendar, load_meta
 from jobs import detect_events
 from scripts.report_phase2 import KNOWN_EPISODES
 
@@ -168,3 +168,17 @@ def test_main_fails_without_writing_on_zero_episodes(tmp_path, tmp_meta_path, mo
     assert detect_events.main(_main_args(tmp_path, tmp_meta_path)) == 1
     assert not (tmp_path / "episodes.parquet").exists()
     assert tmp_meta_path.read_text() == before
+
+
+def test_main_fails_without_writing_when_calendar_ends_early(tmp_path, tmp_meta_path, capsys):
+    """WR-02: past a release's last date every episode would read as a "surprise"."""
+    calendar = load_macro_calendar(SETTINGS.macro_calendar_path)
+    short = calendar[~((calendar["release"] == "CPI") & (calendar["date"] > "2020-01-01"))]
+    calendar_path = tmp_path / "short_calendar.parquet"
+    short.to_parquet(calendar_path, index=False)
+    args = _main_args(tmp_path, tmp_meta_path)
+    args[args.index("--calendar-path") + 1] = str(calendar_path)
+
+    assert detect_events.main(args) == 1
+    assert not (tmp_path / "episodes.parquet").exists()
+    assert "CPI ends" in capsys.readouterr().err

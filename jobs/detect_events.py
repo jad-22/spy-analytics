@@ -8,8 +8,9 @@ shocks, per CLAUDE.md's honesty rule), calls the pure core.events.detect, tags e
 episode with in-window macro releases via core.calendar.tag_episodes (CAL-02), and
 writes the episode backfill. No network call -- this job only reads committed data (the
 calendar is built separately, locally, by jobs/build_macro_calendar.py). On any
-detection or tagging failure, or if the macro calendar is missing, this prints to
-stderr and exits 1 without touching data/.
+detection or tagging failure, or if the macro calendar is missing or ends before the
+latest episode's search window, this prints to stderr and exits 1 without touching
+data/.
 """
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from core.calendar import tag_episodes
+from core.calendar import check_calendar_coverage, tag_episodes
 from core.config import SETTINGS
 from core.events import detect
 from core.storage import (
@@ -67,7 +68,10 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         prices = price_basis(raw, "total_return")
-        df = tag_episodes(detect(prices, SETTINGS), calendar)
+        episodes = detect(prices, SETTINGS)
+        releases = ("FOMC", *(label for label, _rid, _name in SETTINGS.fred_releases))
+        check_calendar_coverage(episodes, calendar, releases)
+        df = tag_episodes(episodes, calendar)
     except ValueError as exc:
         print(f"episode detection failed: {exc}", file=sys.stderr)
         return 1

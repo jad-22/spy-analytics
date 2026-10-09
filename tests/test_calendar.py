@@ -13,6 +13,7 @@ import requests
 from core.calendar import (
     CALENDAR_COLUMNS,
     TAG_COLUMNS,
+    check_calendar_coverage,
     drop_non_release_dates,
     merge_calendar,
     parse_fomc_calendars,
@@ -602,4 +603,45 @@ def test_calendar_module_is_pure():
     for module in modules:
         assert not any(module == bad or module.startswith(f"{bad}.") for bad in forbidden), (
             f"core/calendar.py imports forbidden module {module!r}"
+        )
+
+
+# --- WR-02 (02-REVIEW.md): calendar must cover every episode search window ------------------
+
+def _cov_calendar(cpi_last: str) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2026-01-28", "2026-01-13", cpi_last]),
+            "release": ["FOMC", "CPI", "CPI"],
+            "release_type": ["meeting", "release", "release"],
+            "scheduled": [True, True, True],
+            "source_url": ["https://u/1", "https://u/2", "https://u/3"],
+        }
+    )
+
+
+def _cov_episodes(search_to: str) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "search_from": pd.to_datetime(["2026-01-02"]),
+            "search_to": pd.to_datetime([search_to]),
+        }
+    )
+
+
+def test_check_calendar_coverage_passes_when_every_release_reaches_search_to():
+    check_calendar_coverage(_cov_episodes("2026-01-20"), _cov_calendar("2026-02-11"), ("FOMC", "CPI"))
+
+
+def test_check_calendar_coverage_names_the_short_release():
+    with pytest.raises(ValueError, match=r"CPI ends 2026-01-13"):
+        check_calendar_coverage(
+            _cov_episodes("2026-01-20"), _cov_calendar("2026-01-13"), ("FOMC", "CPI")
+        )
+
+
+def test_check_calendar_coverage_rejects_a_release_with_no_rows():
+    with pytest.raises(ValueError, match=r"payrolls ends never"):
+        check_calendar_coverage(
+            _cov_episodes("2026-01-20"), _cov_calendar("2026-02-11"), ("FOMC", "payrolls")
         )
