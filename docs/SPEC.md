@@ -101,7 +101,7 @@ class NewsProvider(Protocol):
     def explain(self, episode: Episode) -> EventExplanation: ...
 ```
 
-Implementations: `ClaudeSearchProvider` (primary), `NullProvider` (tests and offline dev). A GDELT provider can be added later without touching the app.
+Implementations: `ClaudeSearchProvider` (`jobs/claude_provider.py`, D-03 -- the only networked provider; `core/` stays network-free), `NullProvider` (`core/news/null.py`; tests and offline dev). A GDELT provider can be added later without touching the app.
 
 **Pipeline per episode**
 
@@ -133,7 +133,7 @@ Implementations: `ClaudeSearchProvider` (primary), `NullProvider` (tests and off
 - `confidence` < 0.5 or conflicting sources → `needs_review`.
 - Summary written in the model's own words; no quoted passages beyond a short phrase.
 
-**Curation:** a local-only `jobs/review_events.py` (or a hidden admin page when run locally) lets Jason accept, edit or reject records. Overrides live in `data/event_overrides.json` and always win over model output.
+**Curation:** a local-only `scripts/review_events.py` CLI (D-05; no Streamlit page) lets Jason accept, edit or reject records. Overrides live in `data/event_overrides.json` and always win over model output at read time (`core/storage.py::load_effective_events`); `events.json` itself is never rewritten by a review decision.
 
 **Cost controls**
 
@@ -153,6 +153,7 @@ All persisted data is six small files in `data/`, written only by the nightly jo
 | `episodes.parquet` | One row per detected episode | `episode_id`, `start_date`, `end_date`, `anchor_date`, `direction`, `trigger`, `move_pct`, `max_z`, `severity`, `search_from`, `search_to`, `detector_version` |
 | `events.json` | One record per episode explanation | Schema in News enrichment, plus `model`, `prompt_version`, `enriched_at` |
 | `event_overrides.json` | One record per manual edit | `episode_id`, edited fields, `reviewed_at` |
+| `enrichment_spend.json` | One record per paid backfill/escalation run | `run_id`, `model`, `mode`, tokens, `web_search_requests`, `cost_usd` |
 | `meta.json` | One record | `last_refresh`, `last_trading_day`, `row_counts`, `detector_version` |
 
 Analytics derived at runtime (MAs, signals, equity curves, forward returns) are never stored; they are cheap to recompute and depend on user inputs.
@@ -170,13 +171,15 @@ spy-market-lens/
   core/
     config.py  data.py  indicators.py  signals.py  backtest.py  metrics.py
     events.py  calendar.py  storage.py
-    news/  base.py  claude_search.py  null.py  schema.py
+    news/  base.py  null.py  schema.py  sources.py  prompt.py  cost.py  overrides.py
   jobs/
-    refresh_prices.py  detect_events.py  enrich_events.py  review_events.py  nightly.py
+    refresh_prices.py  detect_events.py  enrich_events.py  claude_provider.py  nightly.py
+  scripts/
+    review_events.py  report_phase2.py  report_news_budget.py  report_phase3.py
   data/            (committed Parquet/JSON)
   notebooks/       (original EDA, kept for history)
   tests/
-  .github/workflows/  ci.yml  nightly.yml
+  .github/workflows/  ci.yml  nightly.yml  backfill.yml
   pyproject.toml  README.md  .streamlit/config.toml
 ```
 

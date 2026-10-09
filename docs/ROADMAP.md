@@ -71,13 +71,16 @@ Q4 2018, Mar 2020, 2022 bear) are all detected. A test asserts this.
 
 ## Phase 3: News enrichment and backfill
 
-1. `core/news/schema.py` (pydantic `EventExplanation`), `base.py` (`NewsProvider`),
-   `null.py`, `claude_search.py` (Claude API + web search tool, JSON-only prompt).
-2. Validation: source dated in window → else `unexplained`; confidence < 0.5 or conflicts →
-   `needs_review`. Store raw response, model ID and prompt version.
-3. `jobs/enrich_events.py` with per-run episode cap and per-request search cap.
-4. Check current model IDs and web-search pricing before the backfill; estimate cost.
-5. Run the backfill, then review it with `jobs/review_events.py` → `data/event_overrides.json`.
+1. [x] `core/news/schema.py` (pydantic `EventExplanation`), `base.py` (`NewsProvider`),
+   `null.py`, `jobs/claude_provider.py` (D-03: Claude API + web search tool, JSON-only
+   prompt; `core/` stays network-free).
+2. [x] Validation: source dated in window → else `unexplained`; confidence < 0.5 or
+   conflicts → `needs_review`. Store raw response, model ID and prompt version.
+3. [x] `jobs/enrich_events.py` with per-run episode cap and per-request search cap.
+4. [x] Check current model IDs and web-search pricing before the backfill; estimate
+   cost (verified 2026-10-09, see docs/PHASE3_BUDGET.md).
+5. [ ] Run the backfill, then review it with `scripts/review_events.py` (D-05) →
+   `data/event_overrides.json`.
 
 **Gate:** every episode is `explained`, `unexplained` or reviewed, and nothing is
 `needs_review` unless it has been explicitly hidden. Spend stays within the agreed budget.
