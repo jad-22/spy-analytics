@@ -14,7 +14,7 @@ affects: [03-06-full-backfill]
 key-files:
   created: []
   modified: []
-status: decision-pending
+status: adjust-in-progress
 ---
 
 # 03-05 Summary: pre-backfill spike
@@ -80,4 +80,6 @@ Per the plan, the run was not retried blind.
 
 ## Decision (Task 3)
 
-_Pending: awaiting Jason's go / adjust / abort._
+**adjust** (2026-10-11). Jason approved the proposed adjust brief and handed it to a Claude Code
+cloud session with "yes do it". The steps are in `.planning/HANDOVER.md`. The full backfill
+(03-06) still needs a separate go after the adjusted spike.

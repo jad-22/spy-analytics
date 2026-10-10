@@ -4,6 +4,8 @@ SPY Market Lens: Streamlit portfolio app for honest MA backtests on SPY, plus so
 explanations for major moves. Authority docs: `docs/SPEC.md` (what and why), `docs/ROADMAP.md`
 (phase tasks, gates, open questions). Update the roadmap checkboxes as work lands.
 
+> **Active handover:** Phase 3 resumes at 03-05 "adjust". Read `.planning/HANDOVER.md` first.
+
 ## Commands (Windows, from repo root)
 
 ```powershell
