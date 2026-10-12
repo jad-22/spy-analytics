@@ -7,8 +7,15 @@ module; jobs/enrich_events.py owns key handling and passes an already-constructe
 client in (D-04/OPS-03). Every SDK exception is re-raised as a ValueError naming only
 the episode_id and the exception's type name -- never str(exc), which could embed
 request details (NEWS-05 Pitfall #5, mirrors core/data.py::fetch_fred_release_dates).
+An anthropic.APIStatusError additionally surfaces its HTTP status and the API's own
+error type and message from the response body, truncated and with anything matching
+"sk-ant-" (and the live key value, read from the environment only to redact it)
+replaced by "[REDACTED]".
 """
 from __future__ import annotations
+
+import os
+import re
 
 import anthropic
 import pydantic
@@ -28,6 +35,39 @@ _RETRYABLE_EXCEPTIONS = (
     anthropic.APIConnectionError,
     anthropic.InternalServerError,
 )
+_KEY_PATTERN = re.compile(r"sk-ant-[A-Za-z0-9_\-]*")
+_REDACTED = "[REDACTED]"
+
+
+def _redact(text: str, settings=SETTINGS) -> str:
+    text = _KEY_PATTERN.sub(_REDACTED, text)
+    live_key = os.environ.get(settings.anthropic_api_key_env, "")
+    if live_key:
+        text = text.replace(live_key, _REDACTED)
+    return text
+
+
+def describe_api_error(exc: BaseException, settings=SETTINGS) -> str:
+    """Leak-safe one-line description of an SDK exception. Only the type name, plus for
+    an APIStatusError the status code and the body's error type/message. Never str(exc),
+    the request, its headers or the environment."""
+    detail = type(exc).__name__
+    if not isinstance(exc, anthropic.APIStatusError):
+        return detail
+    parts = [f"status={exc.status_code}"]
+    body = exc.body if isinstance(exc.body, dict) else {}
+    error = body.get("error") if isinstance(body.get("error"), dict) else {}
+    error_type = error.get("type")
+    if isinstance(error_type, str):
+        parts.append(f"type={_redact(error_type, settings)[:64]}")
+    message = error.get("message")
+    if isinstance(message, str):
+        message = _redact(message, settings)
+        limit = settings.news_api_error_message_max_chars
+        if len(message) > limit:
+            message = message[:limit] + "..."
+        parts.append(f"message={message!r}")
+    return f"{detail} ({', '.join(parts)})"
 
 
 class ClaudeSearchProvider:
@@ -103,7 +143,7 @@ class ClaudeSearchProvider:
             except Exception as exc:  # noqa: BLE001 - never leak the underlying message
                 raise ValueError(
                     f"Claude request failed for episode_id={episode.episode_id}: "
-                    f"{type(exc).__name__}"
+                    f"{describe_api_error(exc, self.settings)}"
                 ) from None
 
             dump = response.model_dump()

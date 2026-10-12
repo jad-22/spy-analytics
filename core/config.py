@@ -153,6 +153,7 @@ class Settings:
     news_prompt_version: str = "v1"  # NEWS-05
     web_search_tool_type: str = "web_search_20250305"  # RESEARCH primary recommendation
     anthropic_api_key_env: str = "ANTHROPIC_API_KEY"  # D-04/OPS-03: never a CLI arg
+    news_api_error_message_max_chars: int = 300  # surfaced APIStatusError message, redacted
     # Budget-estimate assumptions (used by core/news/cost.py::estimate_backfill_usd)
     news_estimate_searches_per_episode: float = 1.5
     news_estimate_input_tokens_per_episode: int = 5000

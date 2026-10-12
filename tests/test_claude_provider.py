@@ -252,3 +252,73 @@ def test_raw_response_is_sanitized_list_with_no_encrypted_keys():
     assert "cited_text" not in dumped
     assert isinstance(enrichment.raw_response, list)
     assert len(enrichment.raw_response) == 1
+
+
+def _bad_request(body: object) -> anthropic.BadRequestError:
+    req = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    resp = httpx.Response(400, request=req)
+    return anthropic.BadRequestError("bad request", response=resp, body=body)
+
+
+def test_bad_request_surfaces_status_error_type_and_message():
+    body = {
+        "type": "error",
+        "error": {"type": "invalid_request_error", "message": "tools.0: unsupported option"},
+    }
+    client = FakeClient(exceptions=[_bad_request(body)])
+    provider = _provider(client)
+
+    with pytest.raises(ValueError) as exc_info:
+        provider.explain(EPISODE_WINDOW)
+    msg = str(exc_info.value)
+    assert EPISODE_WINDOW.episode_id in msg
+    assert "BadRequestError" in msg
+    assert "status=400" in msg
+    assert "type=invalid_request_error" in msg
+    assert "tools.0: unsupported option" in msg
+    # Not retried: a 400 is not transient.
+    assert len(client.messages.calls) == 1
+
+
+def test_bad_request_message_redacts_key_patterns_and_live_key(monkeypatch):
+    monkeypatch.setenv(SETTINGS.anthropic_api_key_env, SENTINEL_KEY)
+    body = {
+        "type": "error",
+        "error": {
+            "type": "invalid_request_error",
+            "message": f"key sk-ant-xxx rejected; also {SENTINEL_KEY}",
+        },
+    }
+    client = FakeClient(exceptions=[_bad_request(body)])
+    provider = _provider(client)
+
+    with pytest.raises(ValueError) as exc_info:
+        provider.explain(EPISODE_WINDOW)
+    msg = str(exc_info.value)
+    assert "sk-ant-" not in msg
+    assert SENTINEL_KEY not in msg
+    assert "[REDACTED]" in msg
+
+
+def test_bad_request_message_is_truncated():
+    long_message = "x" * (SETTINGS.news_api_error_message_max_chars + 500)
+    body = {"type": "error", "error": {"type": "invalid_request_error", "message": long_message}}
+    client = FakeClient(exceptions=[_bad_request(body)])
+    provider = _provider(client)
+
+    with pytest.raises(ValueError) as exc_info:
+        provider.explain(EPISODE_WINDOW)
+    msg = str(exc_info.value)
+    assert "x" * SETTINGS.news_api_error_message_max_chars in msg
+    assert "x" * (SETTINGS.news_api_error_message_max_chars + 1) not in msg
+
+
+def test_bad_request_without_body_falls_back_to_type_and_status():
+    client = FakeClient(exceptions=[_bad_request(None)])
+    provider = _provider(client)
+
+    with pytest.raises(ValueError) as exc_info:
+        provider.explain(EPISODE_WINDOW)
+    msg = str(exc_info.value)
+    assert "BadRequestError (status=400)" in msg
+    assert "bad request" not in msg
