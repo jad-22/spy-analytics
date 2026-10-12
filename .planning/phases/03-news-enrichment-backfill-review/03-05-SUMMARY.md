@@ -83,3 +83,21 @@ Per the plan, the run was not retried blind.
 **adjust** (2026-10-11). Jason approved the proposed adjust brief and handed it to a Claude Code
 cloud session with "yes do it". The steps are in `.planning/HANDOVER.md`. The full backfill
 (03-06) still needs a separate go after the adjusted spike.
+
+## Adjust progress (cloud session, 2026-10-12)
+
+1. **Web search enabled?** Jason confirmed it was already on for the org, so cause 1 is ruled out.
+2. **Surface the API's error.** Done in 33aeca8 on `claude/adoring-pasteur-rtg9bb`.
+   - For an `APIStatusError`, `jobs/claude_provider.py::describe_api_error` now adds:
+     - `status=`;
+     - the body's error `type=`;
+     - its `message=`, truncated to `news_api_error_message_max_chars` (300).
+   - Anything matching `sk-ant-`, and the live key value, is redacted.
+   - 4 new tests. Ruff is clean. Suite: 395 passed, 9 skipped (on Linux, which needs the
+     `tzdata` package for `test_build_macro_calendar.py`).
+   - Leading hypothesis (not yet confirmed): the structured-outputs docs list Citations as
+     incompatible with `output_config.format` (400), and web search results always carry
+     citations. That would be cause 2.
+3. **1-episode diagnostic.** Not yet run. The cloud session's GitHub integration got a 403
+   on `workflow_dispatch`, so Jason dispatches it from the Actions tab with the branch as
+   the ref.
