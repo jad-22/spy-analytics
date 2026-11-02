@@ -1,10 +1,10 @@
 {
   "detector_version": 1,
   "first_trading_day": "1993-01-29",
-  "last_refresh": "2026-10-30T21:35:41.092943Z",
-  "last_trading_day": "2026-10-30",
+  "last_refresh": "2026-11-02T21:35:41.755891Z",
+  "last_trading_day": "2026-11-02",
   "row_counts": {
-    "prices": 8497
+    "prices": 8498
   },
   "schema_version": 1,
   "source": "yfinance",
